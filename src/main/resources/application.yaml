@@ -3,9 +3,9 @@ server:
 
 spring:
   application:
-    name: kubelite
+    name: ork8stra
   datasource:
-    url: jdbc:postgresql://localhost:5432/kubelite
+    url: jdbc:postgresql://localhost:5432/ork8stra
     username: postgres
     password: malik
   jpa:
@@ -16,3 +16,9 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+# jwt conf
+app:
+  jwt:
+    secret: ${JWT_SECRET:dGhpc2lzYXZlcnlsb25nc2VjcmV0a2V5Zm9yand0dG9rZW5zYW5kaXRzaG91bGRiZWF0bGVhc3QyNTZiaXRz}
+    expiration-ms: 86400000
+    issuer: ork8stra
