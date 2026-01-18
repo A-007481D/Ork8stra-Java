@@ -13,9 +13,6 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.stream.Collectors;
 
-/**
- * JWT Token Provider - generates and validates JWT tokens.
- */
 @Component
 @Slf4j
 public class JwtTokenProvider {
@@ -28,7 +25,7 @@ public class JwtTokenProvider {
 
     @Value("${app.jwt.issuer:ork8stra}")
     private String jwtIssuer;
-    
+
     public String generateToken(Authentication authentication) {
         String username = authentication.getName();
         String roles = authentication.getAuthorities().stream()
