@@ -35,9 +35,6 @@ public class AuthService {
     @Value("${app.jwt.expiration-ms:86400000}")
     private long jwtExpirationMs;
 
-    /**
-     * Register a new user.
-     */
     @Transactional
     public TokenResponse register(RegisterRequest request) {
         if (userRepository.existsByUsernameIgnoreCase(request.getUsername())) {

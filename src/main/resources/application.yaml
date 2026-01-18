@@ -5,7 +5,7 @@ spring:
   application:
     name: ork8stra
   datasource:
-    url: jdbc:postgresql://localhost:5432/ork8stra
+    url: jdbc:postgresql://localhost:5435/ork8stra
     username: postgres
     password: malik
   jpa:
