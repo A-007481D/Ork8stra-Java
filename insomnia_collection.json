@@ -1,0 +1,132 @@
+{
+    "_type": "export",
+    "__export_format": 4,
+    "__export_date": "2026-01-20T10:00:00.000Z",
+    "__export_source": "insomnia.desktop.app:v2023.5.8",
+    "resources": [
+        {
+            "_id": "req_health",
+            "parentId": "fld_auth",
+            "modified": 1700000000000,
+            "created": 1700000000000,
+            "url": "http://localhost:8080/api/v1/auth/health",
+            "name": "Health Check",
+            "description": "Check if Auth service is running",
+            "method": "GET",
+            "body": {},
+            "parameters": [],
+            "headers": [],
+            "authentication": {},
+            "metaSortKey": -1700000000200,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_register",
+            "parentId": "fld_auth",
+            "modified": 1700000000000,
+            "created": 1700000000000,
+            "url": "http://localhost:8080/api/v1/auth/register",
+            "name": "Register",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"username\": \"testuser\",\n\t\"email\": \"testuser@example.com\",\n\t\"password\": \"password123\"\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1700000000100,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_login",
+            "parentId": "fld_auth",
+            "modified": 1700000000000,
+            "created": 1700000000000,
+            "url": "http://localhost:8080/api/v1/auth/login",
+            "name": "Login",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"username\": \"testuser\",\n\t\"password\": \"password123\"\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1700000000000,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "fld_auth",
+            "parentId": "wrk_1",
+            "modified": 1700000000000,
+            "created": 1700000000000,
+            "name": "Authentication",
+            "description": "",
+            "environment": {},
+            "environmentPropertyOrder": null,
+            "metaSortKey": -1700000000000,
+            "_type": "request_group"
+        },
+        {
+            "_id": "wrk_1",
+            "parentId": null,
+            "modified": 1700000000000,
+            "created": 1700000000000,
+            "name": "Ork8stra API",
+            "description": "",
+            "scope": "collection",
+            "_type": "workspace"
+        },
+        {
+            "_id": "env_1",
+            "parentId": "wrk_1",
+            "modified": 1700000000000,
+            "created": 1700000000000,
+            "name": "Base Environment",
+            "data": {
+                "base_url": "http://localhost:8080"
+            },
+            "dataPropertyOrder": {
+                "&base_url": "base_url"
+            },
+            "color": null,
+            "isPrivate": false,
+            "metaSortKey": 1700000000000,
+            "_type": "environment"
+        }
+    ]
+}
