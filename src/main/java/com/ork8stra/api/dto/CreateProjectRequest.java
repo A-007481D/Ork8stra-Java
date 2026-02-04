@@ -22,9 +22,9 @@ public class CreateProjectRequest {
     private String owner;
     private String gitUrl;
     private String branch;
-    private String contextPath; // default to .
-    private String dockerfilePath; // default to Dockerfile
-    private Map<String, String> env; // ENV VARS
+    private String contextPath;
+    private String dockerfilePath;
+    private Map<String, String> env;
 
 
 }

@@ -27,7 +27,6 @@ public class BuildService {
         String pipelineRunName = "build-" + build.getId().toString();
         build.setPipelineRunName(pipelineRunName);
 
-        // Create Tekton PipelineRun
         TektonClient tektonClient = kubernetesClient.adapt(TektonClient.class);
 
         PipelineRun pipelineRun = new PipelineRunBuilder()
@@ -39,7 +38,7 @@ public class BuildService {
                 .endMetadata()
                 .withNewSpec()
                 .withNewPipelineRef()
-                .withName("ork8stra-standard-pipeline") // Assuming a standard pipeline exists
+                .withName("ork8stra-standard-pipeline")
                 .endPipelineRef()
                 .addNewParam()
                 .withName("git-url")
@@ -49,7 +48,6 @@ public class BuildService {
                 .withName("commit-hash")
                 .withNewValue(commitHash)
                 .endParam()
-                // Add more params like image registry, etc.
                 .endSpec()
                 .build();
 
