@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -19,7 +20,6 @@ public class ProjectService {
     public Project createProject(String name, String ownerId) {
         Project project = new Project(name, ownerId);
 
-        // Create K8s Namespace
         kubernetesClient.namespaces().resource(
                 new NamespaceBuilder()
                         .withNewMetadata()
@@ -35,5 +35,10 @@ public class ProjectService {
 
     public List<Project> getAllProjects() {
         return projectRepository.findAll();
+    }
+
+    public Project getProjectById(UUID id) {
+        return projectRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Project not found: " + id));
     }
 }
