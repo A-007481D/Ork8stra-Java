@@ -2,9 +2,7 @@
 
 ## Visual Architecture
 
-![V2 Architecture](./v2-architecture.png)
-
-## Mermaid Diagram
+[//]: # (![V3 Architecture]&#40;./v2-architecture.png&#41;)
 
 ```mermaid
 flowchart TB
