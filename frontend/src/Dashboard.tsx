@@ -1,53 +1,91 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from './components/ui/Card';
+import projectsApi from './api/projects';
+// import applicationsApi from './api/applications';
 
 export default function Dashboard() {
-    const navigate = useNavigate();
-    const [token, setToken] = useState<string | null>(null);
+    const { user } = useAuth();
+    const [projectCount, setProjectCount] = useState(0);
+    // const [appCount, setAppCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const storedToken = localStorage.getItem('token');
-        if (!storedToken) {
-            navigate('/');
-        } else {
-            setToken(storedToken);
-        }
-    }, [navigate]);
+        const fetchStats = async () => {
+            try {
+                const projects = await projectsApi.getAll();
+                setProjectCount(projects.length);
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        navigate('/');
-    };
+                // TODO: potential N+1 query issue here if we fetch apps for every project
+                // for now kept simple
+            } catch (error) {
+                console.error('Failed to fetch stats', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-    if (!token) {
-        return <div className="p-8 text-white bg-gray-900 min-h-screen">Loading...</div>;
-    }
+        fetchStats();
+    }, []);
 
     return (
-        <div className="flex min-h-screen bg-gray-900 text-white p-8">
-            <div className="w-full max-w-6xl mx-auto">
-                <header className="flex justify-between items-center mb-12 border-b border-gray-800 pb-6">
-                    <div>
-                        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">Mission Control</h1>
-                        <p className="text-gray-400">System Status: Operational</p>
-                    </div>
-                    <button
-                        onClick={handleLogout}
-                        className="px-4 py-2 bg-red-600/20 text-red-400 border border-red-900 rounded hover:bg-red-600/30 transition-colors"
-                    >
-                        Abort Session
-                    </button>
-                </header>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="p-6 bg-gray-800 rounded-lg border border-gray-700">
-                        <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2">Auth Token</h3>
-                        <div className="font-mono text-xs text-green-400 break-all p-4 bg-black/50 rounded border border-gray-700">
-                            {token}
-                        </div>
-                    </div>
+        <div className="p-10 md:p-14 min-h-full bg-[#0F0F0F] text-[#E3E3E3]">
+            <header className="flex justify-between items-center mb-10">
+                <div>
+                    <h1 className="text-3xl font-bold mb-2 text-white">Welcome back, {user?.username}</h1>
+                    <p className="text-[#888] text-lg">System status: <span className="text-emerald-500">Operational</span></p>
                 </div>
+            </header>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                <Card className="bg-[#141414] border-[#2C2C2C] hover:border-[#3A3A3A] transition-colors">
+                    <CardHeader>
+                        <CardTitle className="text-lg text-[#E3E3E3]">Total Projects</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold text-cyan-400">
+                            {isLoading ? '...' : projectCount}
+                        </div>
+                        <div className="text-xs text-[#666] mt-2">Active workspaces</div>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-[#141414] border-[#2C2C2C] hover:border-[#3A3A3A] transition-colors">
+                    <CardHeader>
+                        <CardTitle className="text-lg text-[#E3E3E3]">Applications</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold text-indigo-400">
+                            {/* {isLoading ? '...' : appCount} */}
+                            0
+                        </div>
+                        <div className="text-xs text-[#666] mt-2">Deployed services</div>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-[#141414] border-[#2C2C2C] hover:border-[#3A3A3A] transition-colors">
+                    <CardHeader>
+                        <CardTitle className="text-lg text-[#E3E3E3]">System Health</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold text-emerald-500">100%</div>
+                        <div className="text-xs text-[#666] mt-2">All systems normal</div>
+                    </CardContent>
+                </Card>
             </div>
+
+            {/* Recent Activity */}
+            <Card className="bg-[#141414] border-[#2C2C2C]">
+                <CardHeader>
+                    <CardTitle className="text-[#E3E3E3]">Recent Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-[#666] text-sm italic">
+                        No recent builds or deployments found.
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }
