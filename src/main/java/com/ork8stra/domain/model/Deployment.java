@@ -21,9 +21,9 @@ public class Deployment {
     private String buildId;
     private String imageTag;
 
-    private Integer internal_port; // 8080 (like heroku contract)
-    private String service_url; // http://my-app.192.168.49.2.nip.io
-    private Map<String, String> env; // ENV VARS
+    private Integer internal_port;
+    private String service_url;
+    private Map<String, String> env;
 
     private Integer replicas;
     private String cpu_limit;

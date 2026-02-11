@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
-//@Service
+@Service
 @RequiredArgsConstructor
 public class ProjectService {
 
