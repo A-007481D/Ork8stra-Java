@@ -37,7 +37,6 @@ public class RabbitMQEventPublisher implements EventPublisher {
         publishEvent(EXCHANGE_BUILDS, ROUTING_KEY_TRIGGER, event);
     }
 
-    // Inner record for event payload
     record BuildTriggerEvent(String projectId, String commitHash, Map<String, String> context) {
     }
 }
