@@ -19,7 +19,7 @@ public class Application {
     @Id
     private UUID id;
     private String name;
-    private UUID projectId; // Reference to Project Aggregate
+    private UUID projectId;
     private String gitRepoUrl;
     private String buildBranch;
 
