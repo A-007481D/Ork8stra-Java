@@ -1,7 +1,7 @@
 {
     "_type": "export",
     "__export_format": 4,
-    "__export_date": "2026-01-20T10:00:00.000Z",
+    "__export_date": "2026-02-20T10:00:00.000Z",
     "__export_source": "insomnia.desktop.app:v2023.5.8",
     "resources": [
         {
@@ -9,7 +9,7 @@
             "parentId": "fld_auth",
             "modified": 1700000000000,
             "created": 1700000000000,
-            "url": "http://localhost:8080/api/v1/auth/health",
+            "url": "{{ _.base_url }}/api/v1/auth/health",
             "name": "Health Check",
             "description": "Check if Auth service is running",
             "method": "GET",
@@ -32,7 +32,7 @@
             "parentId": "fld_auth",
             "modified": 1700000000000,
             "created": 1700000000000,
-            "url": "http://localhost:8080/api/v1/auth/register",
+            "url": "{{ _.base_url }}/api/v1/auth/register",
             "name": "Register",
             "description": "",
             "method": "POST",
@@ -63,7 +63,7 @@
             "parentId": "fld_auth",
             "modified": 1700000000000,
             "created": 1700000000000,
-            "url": "http://localhost:8080/api/v1/auth/login",
+            "url": "{{ _.base_url }}/api/v1/auth/login",
             "name": "Login",
             "description": "",
             "method": "POST",
@@ -90,6 +90,126 @@
             "_type": "request"
         },
         {
+            "_id": "req_create_project",
+            "parentId": "fld_projects",
+            "modified": 1700000000000,
+            "created": 1700000000000,
+            "url": "{{ _.base_url }}/api/v1/projects",
+            "name": "Create Project",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"name\": \"my-cloud-project\"\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "authentication": {
+                "type": "bearer",
+                "token": "{% response 'body', 'req_login', 'b64::JC5hY2Nlc3NUb2tlbg==::46b', 'never', 60 %}"
+            },
+            "metaSortKey": -1700000000000,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_list_projects",
+            "parentId": "fld_projects",
+            "modified": 1700000000000,
+            "created": 1700000000000,
+            "url": "{{ _.base_url }}/api/v1/projects",
+            "name": "List Projects",
+            "description": "",
+            "method": "GET",
+            "body": {},
+            "parameters": [],
+            "headers": [],
+            "authentication": {
+                "type": "bearer",
+                "token": "{% response 'body', 'req_login', 'b64::JC5hY2Nlc3NUb2tlbg==::46b', 'never', 60 %}"
+            },
+            "metaSortKey": -1690000000000,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_create_app",
+            "parentId": "fld_apps",
+            "modified": 1700000000000,
+            "created": 1700000000000,
+            "url": "{{ _.base_url }}/api/v1/projects/{{ _.project_id }}/apps",
+            "name": "Create Application",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"name\": \"payment-service\",\n\t\"gitRepoUrl\": \"https://github.com/my-org/payment-service\",\n\t\"buildBranch\": \"main\",\n\t\"envVars\": {\n\t\t\"DB_USER\": \"root\"\n\t}\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "authentication": {
+                "type": "bearer",
+                "token": "{% response 'body', 'req_login', 'b64::JC5hY2Nlc3NUb2tlbg==::46b', 'never', 60 %}"
+            },
+            "metaSortKey": -1700000000000,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_list_apps",
+            "parentId": "fld_apps",
+            "modified": 1700000000000,
+            "created": 1700000000000,
+            "url": "{{ _.base_url }}/api/v1/projects/{{ _.project_id }}/apps",
+            "name": "List Applications",
+            "description": "",
+            "method": "GET",
+            "body": {},
+            "parameters": [],
+            "headers": [],
+            "authentication": {
+                "type": "bearer",
+                "token": "{% response 'body', 'req_login', 'b64::JC5hY2Nlc3NUb2tlbg==::46b', 'never', 60 %}"
+            },
+            "metaSortKey": -1690000000000,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
             "_id": "fld_auth",
             "parentId": "wrk_1",
             "modified": 1700000000000,
@@ -99,6 +219,30 @@
             "environment": {},
             "environmentPropertyOrder": null,
             "metaSortKey": -1700000000000,
+            "_type": "request_group"
+        },
+        {
+            "_id": "fld_projects",
+            "parentId": "wrk_1",
+            "modified": 1700000000000,
+            "created": 1700000000000,
+            "name": "Projects",
+            "description": "",
+            "environment": {},
+            "environmentPropertyOrder": null,
+            "metaSortKey": -1690000000000,
+            "_type": "request_group"
+        },
+        {
+            "_id": "fld_apps",
+            "parentId": "wrk_1",
+            "modified": 1700000000000,
+            "created": 1700000000000,
+            "name": "Applications",
+            "description": "",
+            "environment": {},
+            "environmentPropertyOrder": null,
+            "metaSortKey": -1680000000000,
             "_type": "request_group"
         },
         {
@@ -118,10 +262,12 @@
             "created": 1700000000000,
             "name": "Base Environment",
             "data": {
-                "base_url": "http://localhost:8080"
+                "base_url": "http://localhost:8080",
+                "project_id": "00000000-0000-0000-0000-000000000000"
             },
             "dataPropertyOrder": {
-                "&base_url": "base_url"
+                "&base_url": "base_url",
+                "&project_id": "project_id"
             },
             "color": null,
             "isPrivate": false,
