@@ -87,3 +87,24 @@ As a user, I want to create and manage applications within projects so that I ca
 
 **Story Points**: 3  
 **Branch**: `feature/application-api`
+
+---
+
+## ORK-105: Organization Management
+
+**Type**: Epic  
+**Priority**: Highest  
+**Sprint**: Week 3 (Feb 9-15, 2026)  
+**Status**: ✅ DONE
+
+### Description
+As a platform user, I want to create organizations and link projects to them, establishing multi-tenancy.
+
+### Acceptance Criteria
+- [x] Create `Organization` entity.
+- [x] Implement `/api/v1/orgs` endpoints.
+- [x] Modify `Project` to link securely via `organizationId`.
+- [x] Enforce authorization checking tests.
+
+**Story Points**: 5  
+**Branch**: `feature/multi-tenancy-orgs`
