@@ -17,8 +17,8 @@ public class ProjectService {
     private final KubernetesClient kubernetesClient;
 
     @Transactional
-    public Project createProject(String name, String ownerId) {
-        Project project = new Project(name, ownerId);
+    public Project createProject(String name, UUID organizationId) {
+        Project project = new Project(name, organizationId);
 
         kubernetesClient.namespaces().resource(
                 new NamespaceBuilder()
