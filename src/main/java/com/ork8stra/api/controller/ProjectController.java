@@ -26,10 +26,9 @@ public class ProjectController {
 
     @PostMapping
     public ResponseEntity<ProjectResponse> createProject(
-            @Valid @RequestBody CreateProjectRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        log.info("Creating project '{}' for user '{}'", request.getName(), userDetails.getUsername());
-        Project project = projectService.createProject(request.getName(), userDetails.getUsername());
+            @Valid @RequestBody CreateProjectRequest request) {
+        log.info("Creating project '{}' under organization '{}'", request.getName(), request.getOrganizationId());
+        Project project = projectService.createProject(request.getName(), request.getOrganizationId());
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(project));
     }
 
@@ -51,7 +50,7 @@ public class ProjectController {
         return ProjectResponse.builder()
                 .id(project.getId().toString())
                 .name(project.getName())
-                .owner(project.getOwnerId())
+                .owner(project.getOrganizationId() != null ? project.getOrganizationId().toString() : null)
                 .build();
     }
 }
