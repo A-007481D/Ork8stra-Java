@@ -5,9 +5,11 @@ import com.ork8stra.applicationmanagement.ApplicationService;
 import com.ork8stra.buildengine.BuildCompletedEvent;
 import com.ork8stra.projectmanagement.Project;
 import com.ork8stra.projectmanagement.ProjectService;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.modulith.events.ApplicationModuleListener;
@@ -25,6 +27,14 @@ public class DeploymentService {
         private final KubernetesClient kubernetesClient;
         private final ApplicationService applicationService;
         private final ProjectService projectService;
+        private final KanikoJobFactory kanikoJobFactory;
+
+        public void triggerBuild(Application application, Project project, String imageDestination) {
+                Job job = kanikoJobFactory.createKanikoJob(application,
+                                project, imageDestination);
+                kubernetesClient.batch().v1().jobs().inNamespace(project.getK8sNamespace()).resource(job)
+                                .createOrReplace();
+        }
 
         @ApplicationModuleListener
         @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -34,7 +44,7 @@ public class DeploymentService {
                 }
 
                 Application app = applicationService.getApplication(event.applicationId());
-                
+
                 Project project = projectService.getAllProjects().stream()
                                 .filter(p -> p.getId().equals(app.getProjectId()))
                                 .findFirst()
@@ -75,7 +85,7 @@ public class DeploymentService {
                                                 .withContainerPort(8080)
                                                 .endPort()
                                                 .withEnv(app.getEnvVars().entrySet().stream()
-                                                                .map(e -> new io.fabric8.kubernetes.api.model.EnvVar(
+                                                                .map(e -> new EnvVar(
                                                                                 e.getKey(), e.getValue(), null))
                                                                 .toList())
                                                 .endContainer()
