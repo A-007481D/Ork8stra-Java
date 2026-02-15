@@ -34,7 +34,7 @@ class GitUrlValidatorTest {
 
     @BeforeEach
     void setUp() {
-
+        validator.setHttpClient(httpClient);
         try {
             when(httpResponse.statusCode()).thenReturn(200);
             when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
