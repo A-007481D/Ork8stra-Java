@@ -14,13 +14,11 @@ import java.util.regex.Pattern;
 @Component
 public class GitUrlValidator {
 
-    // Require at least host + something + something (github.com/user/repo)
     private static final Pattern URL_PATTERN = Pattern
             .compile("^(https?://)([\\w.-]+)(:[0-9]+)?(/[\\w.-]+){2,}(\\.git)?/?$");
 
     private HttpClient httpClient;
 
-    // Allow overriding for tests, but default if not provided by Spring
     public GitUrlValidator() {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
@@ -28,7 +26,6 @@ public class GitUrlValidator {
                 .build();
     }
 
-    // For test injection
     void setHttpClient(HttpClient httpClient) {
         this.httpClient = httpClient;
     }
@@ -43,7 +40,6 @@ public class GitUrlValidator {
             return false;
         }
 
-        // Validate Reachability (HTTP HEAD)
         return isReachable(url);
     }
 
