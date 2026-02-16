@@ -11,7 +11,7 @@ import java.util.UUID;
 @Component
 public class KanikoJobFactory {
 
-    public Job createKanikoJob(Application application, Project project, String imageDestination) {
+    public Job createKanikoJob(Application application, Project project, String imageDestination, UUID buildId) {
         String jobName = "build-" + application.getName() + "-" + UUID.randomUUID().toString().substring(0, 8);
         String gitUrl = application.getGitRepoUrl();
 
@@ -22,6 +22,7 @@ public class KanikoJobFactory {
                 .addToLabels("app", application.getName())
                 .addToLabels("managed-by", "ork8stra")
                 .addToLabels("job-type", "build")
+                .addToAnnotations("ork8stra.com/build-id", buildId.toString())
                 .endMetadata()
                 .withNewSpec()
                 .withBackoffLimit(0)

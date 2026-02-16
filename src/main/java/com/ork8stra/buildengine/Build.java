@@ -24,7 +24,7 @@ public class Build {
     private BuildStatus status;
 
     private String imageTag;
-    private String pipelineRunName;
+    private String jobName;
     private Instant startTime;
     private Instant endTime;
 

@@ -108,3 +108,24 @@ As a platform user, I want to create organizations and link projects to them, es
 
 **Story Points**: 5  
 **Branch**: `feature/multi-tenancy-orgs`
+
+---
+
+## ORK-106: Lightweight Git Validation
+
+**Type**: Task  
+**Priority**: High  
+**Sprint**: Week 2 (Feb 2-8, 2026)  
+**Status**: ✅ DONE
+
+### Description
+As a platform, we need to ensure users cannot submit invalid Git URLs that would cause our underlying image building engine to fail later down the pipeline.
+
+### Acceptance Criteria
+- [x] Implement `GitUrlValidator`.
+- [x] Catch Regex typos in Github/Gitlab URLs.
+- [x] Ping repositories via HTTP HEAD to verify accessibility.
+- [x] Prevent API from creating applications pointing to 404 repositories.
+
+**Story Points**: 2  
+**Branch**: `feature/git-integration`
