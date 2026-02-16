@@ -1,6 +1,7 @@
 package com.ork8stra.infrastructure.messaging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ork8stra.config.RabbitMQConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -16,27 +17,39 @@ public class RabbitMQEventPublisher implements EventPublisher {
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
 
-    public static final String EXCHANGE_BUILDS = "ork8stra.builds";
-    public static final String ROUTING_KEY_TRIGGER = "build.trigger";
-
     @Override
     public void publishEvent(String exchange, String routingKey, Object event) {
         try {
             String json = objectMapper.writeValueAsString(event);
             rabbitTemplate.convertAndSend(exchange, routingKey, json);
-            log.info("Published event to swap '{}/{}': {}", exchange, routingKey, json);
+            log.info("Published event to '{}/{}': {}", exchange, routingKey, json);
         } catch (Exception e) {
-            log.error("Failed to publish event", e);
+            log.error("Failed to publish event to '{}/{}'", exchange, routingKey, e);
             throw new RuntimeException("Event publication failed", e);
         }
     }
 
     @Override
     public void publishBuildTrigger(String projectId, String commitHash, Map<String, String> context) {
-        BuildTriggerEvent event = new BuildTriggerEvent(projectId, commitHash, context);
-        publishEvent(EXCHANGE_BUILDS, ROUTING_KEY_TRIGGER, event);
+        record BuildTriggerEvent(String projectId, String commitHash, Map<String, String> context) {
+        }
+        publishEvent(RabbitMQConfig.EXCHANGE_BUILDS, RabbitMQConfig.ROUTING_KEY_TRIGGER,
+                new BuildTriggerEvent(projectId, commitHash, context));
     }
 
-    record BuildTriggerEvent(String projectId, String commitHash, Map<String, String> context) {
+    @Override
+    public void publishBuildStatus(String buildId, String status, String imageTag) {
+        record BuildStatusEvent(String buildId, String status, String imageTag) {
+        }
+        publishEvent(RabbitMQConfig.EXCHANGE_BUILDS, RabbitMQConfig.ROUTING_KEY_BUILD_STATUS,
+                new BuildStatusEvent(buildId, status, imageTag));
+    }
+
+    @Override
+    public void publishDeploymentStatus(String deploymentId, String applicationId, String status) {
+        record DeploymentStatusEvent(String deploymentId, String applicationId, String status) {
+        }
+        publishEvent(RabbitMQConfig.EXCHANGE_DEPLOYMENTS, RabbitMQConfig.ROUTING_KEY_DEPLOY_STATUS,
+                new DeploymentStatusEvent(deploymentId, applicationId, status));
     }
 }
