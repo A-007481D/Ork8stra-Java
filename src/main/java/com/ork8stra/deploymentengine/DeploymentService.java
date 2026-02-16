@@ -9,7 +9,6 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
-import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.modulith.events.ApplicationModuleListener;
@@ -27,14 +26,6 @@ public class DeploymentService {
         private final KubernetesClient kubernetesClient;
         private final ApplicationService applicationService;
         private final ProjectService projectService;
-        private final KanikoJobFactory kanikoJobFactory;
-
-        public void triggerBuild(Application application, Project project, String imageDestination) {
-                Job job = kanikoJobFactory.createKanikoJob(application,
-                                project, imageDestination);
-                kubernetesClient.batch().v1().jobs().inNamespace(project.getK8sNamespace()).resource(job)
-                                .createOrReplace();
-        }
 
         @ApplicationModuleListener
         @Transactional(propagation = Propagation.REQUIRES_NEW)

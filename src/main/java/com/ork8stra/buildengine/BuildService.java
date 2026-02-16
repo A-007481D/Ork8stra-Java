@@ -1,58 +1,46 @@
 package com.ork8stra.buildengine;
 
+import com.ork8stra.applicationmanagement.Application;
+import com.ork8stra.deploymentengine.KanikoJobFactory;
+import com.ork8stra.projectmanagement.Project;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.tekton.client.TektonClient;
-import io.fabric8.tekton.pipeline.v1beta1.PipelineRun;
-import io.fabric8.tekton.pipeline.v1beta1.PipelineRunBuilder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BuildService {
 
     private final BuildRepository buildRepository;
     private final KubernetesClient kubernetesClient;
+    private final KanikoJobFactory kanikoJobFactory;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public Build triggerBuild(UUID applicationId, String gitRepoUrl, String commitHash, String namespace) {
-        Build build = new Build(applicationId, commitHash);
+    public Build triggerBuild(Application app, Project project, String imageDestination) {
+        Build build = new Build(app.getId(), "HEAD");
         build.setStatus(BuildStatus.RUNNING);
+        build.setImageTag(imageDestination);
 
-        String pipelineRunName = "build-" + build.getId().toString();
-        build.setPipelineRunName(pipelineRunName);
+        Job job = kanikoJobFactory.createKanikoJob(app, project, imageDestination, build.getId());
+        String jobName = job.getMetadata().getName();
+        build.setJobName(jobName);
 
-        TektonClient tektonClient = kubernetesClient.adapt(TektonClient.class);
+        kubernetesClient.batch().v1().jobs()
+                .inNamespace(project.getK8sNamespace())
+                .resource(job)
+                .create();
 
-        PipelineRun pipelineRun = new PipelineRunBuilder()
-                .withNewMetadata()
-                .withName(pipelineRunName)
-                .withNamespace(namespace)
-                .addToLabels("build-id", build.getId().toString())
-                .addToLabels("app-id", applicationId.toString())
-                .endMetadata()
-                .withNewSpec()
-                .withNewPipelineRef()
-                .withName("ork8stra-standard-pipeline")
-                .endPipelineRef()
-                .addNewParam()
-                .withName("git-url")
-                .withNewValue(gitRepoUrl)
-                .endParam()
-                .addNewParam()
-                .withName("commit-hash")
-                .withNewValue(commitHash)
-                .endParam()
-                .endSpec()
-                .build();
-
-        tektonClient.v1beta1().pipelineRuns().inNamespace(namespace).resource(pipelineRun).create();
-
+        log.info("Dispatched Kaniko job '{}' in namespace '{}'", jobName, project.getK8sNamespace());
         return buildRepository.save(build);
     }
 
@@ -65,6 +53,9 @@ public class BuildService {
         if (imageTag != null) {
             build.setImageTag(imageTag);
         }
+        if (status == BuildStatus.SUCCESS || status == BuildStatus.FAILED) {
+            build.setEndTime(Instant.now());
+        }
 
         buildRepository.save(build);
 
@@ -73,5 +64,14 @@ public class BuildService {
         } else if (status == BuildStatus.FAILED) {
             eventPublisher.publishEvent(new BuildCompletedEvent(buildId, build.getApplicationId(), null, false));
         }
+    }
+
+    public List<Build> getBuildsForApplication(UUID applicationId) {
+        return buildRepository.findByApplicationId(applicationId);
+    }
+
+    public Build getBuild(UUID buildId) {
+        return buildRepository.findById(buildId)
+                .orElseThrow(() -> new IllegalArgumentException("Build not found: " + buildId));
     }
 }

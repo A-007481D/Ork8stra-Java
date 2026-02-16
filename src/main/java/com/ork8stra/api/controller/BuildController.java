@@ -1,8 +1,10 @@
 package com.ork8stra.api.controller;
 
+import com.ork8stra.api.dto.BuildResponse;
 import com.ork8stra.applicationmanagement.Application;
 import com.ork8stra.applicationmanagement.ApplicationService;
-import com.ork8stra.deploymentengine.DeploymentService;
+import com.ork8stra.buildengine.Build;
+import com.ork8stra.buildengine.BuildService;
 import com.ork8stra.projectmanagement.Project;
 import com.ork8stra.projectmanagement.ProjectService;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -20,10 +23,10 @@ public class BuildController {
 
     private final ApplicationService applicationService;
     private final ProjectService projectService;
-    private final DeploymentService deploymentService;
+    private final BuildService buildService;
 
     @PostMapping
-    public ResponseEntity<String> triggerBuild(@PathVariable UUID appId) {
+    public ResponseEntity<BuildResponse> triggerBuild(@PathVariable UUID appId) {
         Application app = applicationService.getApplication(appId);
         Project project = projectService.getProjectById(app.getProjectId());
 
@@ -32,8 +35,20 @@ public class BuildController {
         log.info("Triggering build for app '{}' into namespace '{}' targeting image '{}'",
                 app.getName(), project.getK8sNamespace(), imageTag);
 
-        deploymentService.triggerBuild(app, project, imageTag);
+        Build build = buildService.triggerBuild(app, project, imageTag);
 
-        return ResponseEntity.accepted().body("Build engine job started: " + imageTag);
+        return ResponseEntity.accepted().body(BuildResponse.from(build));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<BuildResponse>> listBuilds(@PathVariable UUID appId) {
+        List<Build> builds = buildService.getBuildsForApplication(appId);
+        return ResponseEntity.ok(builds.stream().map(BuildResponse::from).toList());
+    }
+
+    @GetMapping("/{buildId}")
+    public ResponseEntity<BuildResponse> getBuild(@PathVariable UUID appId, @PathVariable UUID buildId) {
+        Build build = buildService.getBuild(buildId);
+        return ResponseEntity.ok(BuildResponse.from(build));
     }
 }
