@@ -2,6 +2,7 @@ package com.ork8stra.buildengine;
 
 import com.ork8stra.applicationmanagement.Application;
 import com.ork8stra.deploymentengine.KanikoJobFactory;
+import com.ork8stra.infrastructure.messaging.EventPublisher;
 import com.ork8stra.projectmanagement.Project;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -23,7 +24,8 @@ public class BuildService {
     private final BuildRepository buildRepository;
     private final KubernetesClient kubernetesClient;
     private final KanikoJobFactory kanikoJobFactory;
-    private final ApplicationEventPublisher eventPublisher;
+    private final ApplicationEventPublisher applicationEventPublisher;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public Build triggerBuild(Application app, Project project, String imageDestination) {
@@ -41,7 +43,11 @@ public class BuildService {
                 .create();
 
         log.info("Dispatched Kaniko job '{}' in namespace '{}'", jobName, project.getK8sNamespace());
-        return buildRepository.save(build);
+        Build saved = buildRepository.save(build);
+
+        eventPublisher.publishBuildStatus(saved.getId().toString(), "RUNNING", imageDestination);
+
+        return saved;
     }
 
     @Transactional
@@ -59,10 +65,14 @@ public class BuildService {
 
         buildRepository.save(build);
 
+        eventPublisher.publishBuildStatus(buildId.toString(), status.name(), imageTag);
+
         if (status == BuildStatus.SUCCESS) {
-            eventPublisher.publishEvent(new BuildCompletedEvent(buildId, build.getApplicationId(), imageTag, true));
+            applicationEventPublisher
+                    .publishEvent(new BuildCompletedEvent(buildId, build.getApplicationId(), imageTag, true));
         } else if (status == BuildStatus.FAILED) {
-            eventPublisher.publishEvent(new BuildCompletedEvent(buildId, build.getApplicationId(), null, false));
+            applicationEventPublisher
+                    .publishEvent(new BuildCompletedEvent(buildId, build.getApplicationId(), null, false));
         }
     }
 

@@ -129,3 +129,65 @@ As a platform, we need to ensure users cannot submit invalid Git URLs that would
 
 **Story Points**: 2  
 **Branch**: `feature/git-integration`
+
+---
+
+## ORK-108: Refactor BuildService (Tekton → Kaniko)
+
+**Type**: Task  
+**Priority**: Highest  
+**Sprint**: Week 4 (Feb 16-22, 2026)  
+**Status**: ✅ DONE
+
+### Description
+As a platform, the `BuildService` must use our Kaniko-based `KanikoJobFactory` instead of the legacy Tekton PipelineRun approach, so that builds run as native K8s Jobs.
+
+### Acceptance Criteria
+- [x] Remove all Tekton imports and `TektonClient` usage from `BuildService`.
+- [x] Delegate build execution to `KanikoJobFactory` + `KubernetesClient`.
+- [x] Persist `Build` records with `jobName` tracking.
+- [x] Add `getBuildsForApplication()` and `getBuild()` query methods.
+
+**Story Points**: 3  
+**Branch**: `feature/build-lifecycle`
+
+---
+
+## ORK-109: Kubernetes Job Watcher
+
+**Type**: Task  
+**Priority**: High  
+**Sprint**: Week 4 (Feb 16-22, 2026)  
+**Status**: ✅ DONE
+
+### Description
+As a platform, we need a component that watches Kaniko Jobs for completion and fires `BuildCompletedEvent` to trigger the deployment pipeline.
+
+### Acceptance Criteria
+- [x] Implement `KanikoJobWatcher` using Fabric8 Watch API.
+- [x] Detect Job success/failure and call `BuildService.updateBuildStatus()`.
+- [x] Extract image tag from completed Job args for deployment.
+
+**Story Points**: 3  
+**Branch**: `feature/build-lifecycle`
+
+---
+
+## ORK-110: Build Status Tracking API
+
+**Type**: Task  
+**Priority**: High  
+**Sprint**: Week 4 (Feb 16-22, 2026)  
+**Status**: ✅ DONE
+
+### Description
+As a user, I want to query the status of my builds so that I can track progress and troubleshoot failures.
+
+### Acceptance Criteria
+- [x] `GET /api/v1/apps/{appId}/build` — list all builds for an application.
+- [x] `GET /api/v1/apps/{appId}/build/{buildId}` — get build status/details.
+- [x] `BuildResponse` DTO with proper field mapping.
+
+**Story Points**: 2  
+**Branch**: `feature/build-lifecycle`
+

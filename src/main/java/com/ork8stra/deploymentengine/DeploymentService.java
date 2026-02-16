@@ -4,6 +4,7 @@ import com.ork8stra.applicationmanagement.Application;
 import com.ork8stra.applicationmanagement.ApplicationService;
 import com.ork8stra.buildengine.BuildCompletedEvent;
 import com.ork8stra.projectmanagement.Project;
+import com.ork8stra.infrastructure.messaging.EventPublisher;
 import com.ork8stra.projectmanagement.ProjectService;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
@@ -26,6 +27,7 @@ public class DeploymentService {
         private final KubernetesClient kubernetesClient;
         private final ApplicationService applicationService;
         private final ProjectService projectService;
+        private final EventPublisher eventPublisher;
 
         @ApplicationModuleListener
         @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -105,5 +107,10 @@ public class DeploymentService {
 
                 deployment.setStatus(DeploymentStatus.HEALTHY);
                 deploymentRepository.save(deployment);
+
+                eventPublisher.publishDeploymentStatus(
+                                deployment.getId().toString(),
+                                app.getId().toString(),
+                                DeploymentStatus.HEALTHY.name());
         }
 }
