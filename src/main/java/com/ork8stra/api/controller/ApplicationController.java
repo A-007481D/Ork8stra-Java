@@ -52,6 +52,21 @@ public class ApplicationController {
         return ResponseEntity.ok(toResponse(app));
     }
 
+    @PutMapping("/apps/{id}")
+    public ResponseEntity<ApplicationResponse> updateApplication(
+            @PathVariable UUID id,
+            @RequestBody com.ork8stra.api.dto.UpdateApplicationRequest request) {
+        Application updated = applicationService.updateApplication(
+                id, request.getGitRepoUrl(), request.getBuildBranch(), request.getEnvVars());
+        return ResponseEntity.ok(toResponse(updated));
+    }
+
+    @DeleteMapping("/apps/{id}")
+    public ResponseEntity<Void> deleteApplication(@PathVariable UUID id) {
+        applicationService.deleteApplication(id);
+        return ResponseEntity.noContent().build();
+    }
+
     private ApplicationResponse toResponse(Application app) {
         return ApplicationResponse.builder()
                 .id(app.getId())

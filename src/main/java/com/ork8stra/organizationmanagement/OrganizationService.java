@@ -33,4 +33,10 @@ public class OrganizationService {
         return organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new IllegalArgumentException("Organization not found: " + organizationId));
     }
+
+    @Transactional
+    public void deleteOrganization(UUID organizationId) {
+        Organization org = getOrganization(organizationId);
+        organizationRepository.delete(org);
+    }
 }

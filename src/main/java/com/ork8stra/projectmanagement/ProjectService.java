@@ -41,4 +41,11 @@ public class ProjectService {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + id));
     }
+
+    @Transactional
+    public void deleteProject(UUID id) {
+        Project project = getProjectById(id);
+        kubernetesClient.namespaces().withName(project.getK8sNamespace()).delete();
+        projectRepository.delete(project);
+    }
 }

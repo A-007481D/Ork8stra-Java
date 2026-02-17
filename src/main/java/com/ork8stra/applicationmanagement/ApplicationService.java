@@ -39,4 +39,30 @@ public class ApplicationService {
         return applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new IllegalArgumentException("Application not found: " + applicationId));
     }
+
+    @Transactional
+    public Application updateApplication(UUID applicationId, String gitRepoUrl, String buildBranch,
+            Map<String, String> envVars) {
+        Application app = getApplication(applicationId);
+
+        if (gitRepoUrl != null && !gitRepoUrl.equals(app.getGitRepoUrl())) {
+            if (!gitUrlValidator.isValid(gitRepoUrl)) {
+                throw new IllegalArgumentException("Invalid or unreachable Git repository URL: " + gitRepoUrl);
+            }
+            app.setGitRepoUrl(gitRepoUrl);
+        }
+        if (buildBranch != null) {
+            app.setBuildBranch(buildBranch);
+        }
+        if (envVars != null) {
+            app.setEnvVars(envVars);
+        }
+        return applicationRepository.save(app);
+    }
+
+    @Transactional
+    public void deleteApplication(UUID applicationId) {
+        Application app = getApplication(applicationId);
+        applicationRepository.delete(app);
+    }
 }

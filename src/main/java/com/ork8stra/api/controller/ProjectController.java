@@ -46,6 +46,12 @@ public class ProjectController {
         return ResponseEntity.ok(toResponse(project));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteProject(@PathVariable UUID id) {
+        projectService.deleteProject(id);
+        return ResponseEntity.noContent().build();
+    }
+
     private ProjectResponse toResponse(Project project) {
         return ProjectResponse.builder()
                 .id(project.getId().toString())

@@ -13,6 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/orgs")
@@ -40,6 +41,12 @@ public class OrganizationController {
                 .toList();
 
         return ResponseEntity.ok(responses);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteOrganization(@PathVariable UUID id) {
+        organizationService.deleteOrganization(id);
+        return ResponseEntity.noContent().build();
     }
 
     private OrganizationResponse toResponse(Organization org) {
