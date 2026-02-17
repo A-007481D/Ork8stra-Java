@@ -4,6 +4,7 @@ import com.ork8stra.applicationmanagement.Application;
 import com.ork8stra.applicationmanagement.ApplicationService;
 import com.ork8stra.auth.security.JwtTokenProvider;
 import com.ork8stra.buildengine.Build;
+import com.ork8stra.buildengine.BuildLogService;
 import com.ork8stra.buildengine.BuildService;
 import com.ork8stra.buildengine.BuildStatus;
 import com.ork8stra.projectmanagement.Project;
@@ -44,6 +45,9 @@ class BuildControllerTest {
 
     @MockitoBean
     private BuildService buildService;
+
+    @MockitoBean
+    private BuildLogService buildLogService;
 
     @Test
     @WithMockUser
