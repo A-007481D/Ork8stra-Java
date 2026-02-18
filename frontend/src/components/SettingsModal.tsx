@@ -57,7 +57,7 @@ export default function SettingsModal({ isOpen, onClose, service, token, onUpdat
                 env_vars: envObj
             };
 
-            const res = await fetch(`http://localhost:8000/services/${service.id}`, {
+            const res = await fetch(`http://localhost:8080/services/${service.id}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -79,7 +79,7 @@ export default function SettingsModal({ isOpen, onClose, service, token, onUpdat
         if (!confirm("Are you sure you want to delete this service? This action cannot be undone.")) return;
 
         try {
-            const res = await fetch(`http://localhost:8000/services/${service.id}`, {
+            const res = await fetch(`http://localhost:8080/services/${service.id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });

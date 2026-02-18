@@ -20,7 +20,7 @@ export default function CreateTeamModal({ isOpen, onClose, onCreated, token, org
         e.preventDefault();
         setLoading(true);
         try {
-            const res = await fetch("http://localhost:8000/teams", {
+            const res = await fetch("http://localhost:8080/teams", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

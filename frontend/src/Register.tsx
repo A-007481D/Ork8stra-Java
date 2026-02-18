@@ -6,13 +6,35 @@ export default function Register() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
-    const handleRegister = (e: React.FormEvent) => {
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+
+    const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        // Simulate API call
-        setTimeout(() => {
-            navigate("/dashboard");
-        }, 1500);
+        setError("");
+
+        try {
+            const res = await fetch("http://localhost:8080/api/v1/auth/register", {
+                method: "POST",
+                body: JSON.stringify({ username, email, password }),
+                headers: { "Content-Type": "application/json" },
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem("token", data.token);
+                navigate("/dashboard");
+            } else {
+                setError("Failed to create account. Please try again.");
+            }
+        } catch {
+            setError("Unable to connect to server");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -83,21 +105,17 @@ export default function Register() {
                         </div>
 
                         <form onSubmit={handleRegister} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1.5">First name</label>
-                                    <input type="text" className="w-full bg-[#0D0E12] border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1.5">Last name</label>
-                                    <input type="text" className="w-full bg-[#0D0E12] border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
-                                </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1.5">Username</label>
+                                <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="w-full bg-[#0D0E12] border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="johndoe" />
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-400 mb-1.5">Email address</label>
                                 <input
                                     type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
                                     className="w-full bg-[#0D0E12] border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                                     placeholder="engineer@company.com"
                                     required
@@ -107,11 +125,19 @@ export default function Register() {
                                 <label className="block text-sm font-medium text-slate-400 mb-1.5">Password</label>
                                 <input
                                     type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                     className="w-full bg-[#0D0E12] border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                                     placeholder="Min. 8 characters"
                                     required
                                 />
                             </div>
+
+                            {error && (
+                                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-500 text-xs font-medium text-center">
+                                    {error}
+                                </div>
+                            )}
 
                             <button
                                 disabled={loading}

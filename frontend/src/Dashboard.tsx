@@ -312,7 +312,7 @@ const ServiceDetail = ({ service, token, onUpdate }: { service: Service, token: 
 
     const fetchData = useCallback(async () => {
         try {
-            const res = await fetch("http://localhost:8000/api/v1/deployments", { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch("http://localhost:8080/api/v1/deployments", { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) {
                 const all: Deployment[] = await res.json();
                 const filtered = all
@@ -336,7 +336,7 @@ const ServiceDetail = ({ service, token, onUpdate }: { service: Service, token: 
         if (!currentDeployment) return;
         const fetchLogs = async () => {
             try {
-                const res = await fetch(`http://localhost:8000/api/v1/deployments/${currentDeployment.id}/logs`, {
+                const res = await fetch(`http://localhost:8080/api/v1/deployments/${currentDeployment.id}/logs`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (!res.ok) return;
@@ -363,7 +363,7 @@ const ServiceDetail = ({ service, token, onUpdate }: { service: Service, token: 
             const formData = new FormData();
             formData.append("service_id", service.id);
 
-            const res = await fetch("http://localhost:8000/api/v1/deployments", {
+            const res = await fetch("http://localhost:8080/api/v1/deployments", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}` },
                 body: formData
@@ -617,7 +617,7 @@ export default function Dashboard() {
     const fetchOrgs = useCallback(async () => {
         if (!token) return;
         try {
-            const res = await fetch("http://localhost:8000/api/v1/organizations", { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch("http://localhost:8080/api/v1/organizations", { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) {
                 const data = await res.json() || [];
                 setOrgs(data);
@@ -632,7 +632,7 @@ export default function Dashboard() {
     const fetchTeams = useCallback(async () => {
         if (!token || !currentOrg) return;
         try {
-            const res = await fetch("http://localhost:8000/api/v1/teams", {
+            const res = await fetch("http://localhost:8080/api/v1/teams", {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     "X-Org-ID": currentOrg.id
@@ -655,7 +655,7 @@ export default function Dashboard() {
     const fetchProjects = useCallback(async () => {
         if (!token || !currentTeam) return;
         try {
-            const res = await fetch(`http://localhost:8000/api/v1/projects?team_id=${currentTeam.id}`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`http://localhost:8080/api/v1/projects?team_id=${currentTeam.id}`, { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) setProjects(await res.json());
         } catch (e) { console.error(e); }
     }, [token, currentTeam]);
@@ -665,7 +665,7 @@ export default function Dashboard() {
         if (!token || (viewState.type !== 'PROJECT' && viewState.type !== 'SERVICE')) return;
         const projectId = viewState.type === 'PROJECT' ? viewState.project.id : viewState.project.id;
         try {
-            const res = await fetch(`http://localhost:8000/api/v1/services?project_id=${projectId}`, {
+            const res = await fetch(`http://localhost:8080/api/v1/services?project_id=${projectId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {

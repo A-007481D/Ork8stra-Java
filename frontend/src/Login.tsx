@@ -5,7 +5,7 @@ import { Github, CheckCircle2, Loader2, Command } from "lucide-react";
 export default function Login() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    const [email, setEmail] = useState("");
+    const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
@@ -15,9 +15,9 @@ export default function Login() {
         setError("");
 
         try {
-            const res = await fetch("http://localhost:8000/api/v1/auth/login", {
+            const res = await fetch("http://localhost:8080/api/v1/auth/login", {
                 method: "POST",
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ username, password }),
                 headers: { "Content-Type": "application/json" },
             });
 
@@ -104,13 +104,13 @@ export default function Login() {
 
                         <form onSubmit={handleLogin} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1.5">Email address</label>
+                                <label className="block text-sm font-medium text-slate-400 mb-1.5">Username</label>
                                 <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    type="text"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
                                     className="w-full bg-[#0D0E12] border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                                    placeholder="engineer@company.com"
+                                    placeholder="johndoe"
                                     required
                                 />
                             </div>
