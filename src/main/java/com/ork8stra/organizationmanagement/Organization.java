@@ -21,10 +21,10 @@ public class Organization {
     private UUID id;
     private String name;
     private String slug;
-    private String ownerId;
+    private UUID ownerId;
     private Instant createdAt;
 
-    public Organization(String name, String slug, String ownerId) {
+    public Organization(String name, String slug, UUID ownerId) {
         this.id = UUID.randomUUID();
         this.name = name;
         this.slug = slug;

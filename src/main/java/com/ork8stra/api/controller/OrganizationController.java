@@ -19,15 +19,18 @@ import java.util.UUID;
 @RequestMapping("/api/v1/orgs")
 @RequiredArgsConstructor
 public class OrganizationController {
-
     private final OrganizationService organizationService;
+    private final com.ork8stra.user.UserRepository userRepository;
 
     @PostMapping
     public ResponseEntity<OrganizationResponse> createOrganization(
             @Valid @RequestBody CreateOrganizationRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        Organization org = organizationService.createOrganization(request.getName(), userDetails.getUsername());
+        com.ork8stra.user.User user = userRepository.findByUsernameIgnoreCase(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Organization org = organizationService.createOrganization(request.getName(), user.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(org));
     }
 
@@ -35,7 +38,10 @@ public class OrganizationController {
     public ResponseEntity<List<OrganizationResponse>> getMyOrganizations(
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        List<OrganizationResponse> responses = organizationService.getOrganizationsByOwner(userDetails.getUsername())
+        com.ork8stra.user.User user = userRepository.findByUsernameIgnoreCase(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        List<OrganizationResponse> responses = organizationService.getOrganizationsByOwner(user.getId())
                 .stream()
                 .map(this::toResponse)
                 .toList();

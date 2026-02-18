@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Github, CheckCircle2, Loader2, Command } from "lucide-react";
 
 export default function Login() {
-    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -24,7 +23,8 @@ export default function Login() {
             if (res.ok) {
                 const data = await res.json();
                 localStorage.setItem("token", data.accessToken);
-                navigate("/dashboard");
+                localStorage.setItem("user", JSON.stringify({ username: data.username || username }));
+                window.location.href = "/dashboard";
             } else {
                 setError("Invalid email or password");
             }

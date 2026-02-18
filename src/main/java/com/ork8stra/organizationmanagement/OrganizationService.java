@@ -14,7 +14,7 @@ public class OrganizationService {
     private final OrganizationRepository organizationRepository;
 
     @Transactional
-    public Organization createOrganization(String name, String ownerId) {
+    public Organization createOrganization(String name, UUID ownerId) {
         String slug = name.toLowerCase().replaceAll("[^a-z0-9]", "-").replaceAll("-+", "-");
 
         if (organizationRepository.findBySlug(slug).isPresent()) {
@@ -25,7 +25,7 @@ public class OrganizationService {
         return organizationRepository.save(org);
     }
 
-    public List<Organization> getOrganizationsByOwner(String ownerId) {
+    public List<Organization> getOrganizationsByOwner(UUID ownerId) {
         return organizationRepository.findByOwnerId(ownerId);
     }
 

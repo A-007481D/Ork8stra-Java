@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ArrowLeft, Github, CheckCircle2, Loader2 } from "lucide-react";
 
 export default function Register() {
-    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
     const [username, setUsername] = useState("");
@@ -26,7 +25,8 @@ export default function Register() {
             if (res.ok) {
                 const data = await res.json();
                 localStorage.setItem("token", data.accessToken);
-                navigate("/dashboard");
+                localStorage.setItem("user", JSON.stringify({ username: data.username || username }));
+                window.location.href = "/dashboard";
             } else {
                 setError("Failed to create account. Please try again.");
             }
