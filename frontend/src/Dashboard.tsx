@@ -312,16 +312,8 @@ const ServiceDetail = ({ service, token, onUpdate }: { service: Service, token: 
 
     const fetchData = useCallback(async () => {
         try {
-            const res = await fetch("http://localhost:8080/api/v1/deployments", { headers: { Authorization: `Bearer ${token}` } });
-            if (res.ok) {
-                const all: Deployment[] = await res.json();
-                const filtered = all
-                    .filter(d => d.service_id === service.id)
-                    .sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime());
-                setDeployments(filtered);
-                // User requested NOT to auto-select latest log on load
-                if (filtered.length > 0 && !currentDeployment) setCurrentDeployment(filtered[0]);
-            }
+            // Mocking since global deployments endpoint doesn't exist
+            setDeployments([]);
         } catch (e) { console.error(e); }
     }, [token, service.id, currentDeployment]);
 
@@ -617,7 +609,7 @@ export default function Dashboard() {
     const fetchOrgs = useCallback(async () => {
         if (!token) return;
         try {
-            const res = await fetch("http://localhost:8080/api/v1/organizations", { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch("http://localhost:8080/api/v1/orgs", { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) {
                 const data = await res.json() || [];
                 setOrgs(data);
@@ -628,34 +620,21 @@ export default function Dashboard() {
         } catch (e) { console.error(e); }
     }, [token, currentOrg]);
 
-    // Fetch Teams (Depends on Current Org)
+    // Mock Teams (Frontend relies on it, but backend uses Orgs directly)
     const fetchTeams = useCallback(async () => {
         if (!token || !currentOrg) return;
         try {
-            const res = await fetch("http://localhost:8080/api/v1/teams", {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "X-Org-ID": currentOrg.id
-                }
-            });
-            if (res.ok) {
-                const data = await res.json() || [];
-                setTeams(data);
-                // Auto-select first team
-                if (Array.isArray(data) && data.length > 0 && !currentTeam) {
-                    setCurrentTeam(data[0]);
-                } else if (data.length === 0) {
-                    setCurrentTeam(null); // Clear team if org has none
-                }
-            }
+            const mockedTeam = { id: currentOrg.id, name: currentOrg.name + " Team", org_id: currentOrg.id, organization_id: currentOrg.id, slug: "default-team", members: [], created_at: new Date().toISOString() };
+            setTeams([mockedTeam]);
+            if (!currentTeam) setCurrentTeam(mockedTeam);
         } catch (e) { console.error(e); }
     }, [token, currentOrg, currentTeam]);
 
-    // Fetch Projects (Depends on Current Team)
+    // Fetch Projects
     const fetchProjects = useCallback(async () => {
         if (!token || !currentTeam) return;
         try {
-            const res = await fetch(`http://localhost:8080/api/v1/projects?team_id=${currentTeam.id}`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`http://localhost:8080/api/v1/projects`, { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) setProjects(await res.json());
         } catch (e) { console.error(e); }
     }, [token, currentTeam]);
@@ -665,7 +644,7 @@ export default function Dashboard() {
         if (!token || (viewState.type !== 'PROJECT' && viewState.type !== 'SERVICE')) return;
         const projectId = viewState.type === 'PROJECT' ? viewState.project.id : viewState.project.id;
         try {
-            const res = await fetch(`http://localhost:8080/api/v1/services?project_id=${projectId}`, {
+            const res = await fetch(`http://localhost:8080/api/v1/projects/${projectId}/apps`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
