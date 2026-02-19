@@ -620,21 +620,37 @@ export default function Dashboard() {
         } catch (e) { console.error(e); }
     }, [token, currentOrg]);
 
-    // Mock Teams (Frontend relies on it, but backend uses Orgs directly)
+    // Fetch Teams from backend using the current Organization ID
     const fetchTeams = useCallback(async () => {
         if (!token || !currentOrg) return;
         try {
-            const mockedTeam = { id: currentOrg.id, name: currentOrg.name + " Team", org_id: currentOrg.id, organization_id: currentOrg.id, slug: "default-team", members: [], created_at: new Date().toISOString() };
-            setTeams([mockedTeam]);
-            if (!currentTeam) setCurrentTeam(mockedTeam);
-        } catch (e) { console.error(e); }
+            const res = await fetch(`http://localhost:8080/api/v1/teams`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "X-Org-ID": currentOrg.id
+                }
+            });
+            if (res.ok) {
+                const fetchedTeams: Team[] = await res.json();
+                setTeams(fetchedTeams);
+
+                // Select the first team if none is selected
+                if (!currentTeam && fetchedTeams.length > 0) {
+                    setCurrentTeam(fetchedTeams[0]);
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
     }, [token, currentOrg, currentTeam]);
 
-    // Fetch Projects
+    // Fetch Projects using the current Team ID
     const fetchProjects = useCallback(async () => {
         if (!token || !currentTeam) return;
         try {
-            const res = await fetch(`http://localhost:8080/api/v1/projects`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`http://localhost:8080/api/v1/projects?teamId=${currentTeam.id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             if (res.ok) setProjects(await res.json());
         } catch (e) { console.error(e); }
     }, [token, currentTeam]);
