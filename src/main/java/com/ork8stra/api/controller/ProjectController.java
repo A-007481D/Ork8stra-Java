@@ -9,8 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,14 +25,14 @@ public class ProjectController {
     @PostMapping
     public ResponseEntity<ProjectResponse> createProject(
             @Valid @RequestBody CreateProjectRequest request) {
-        log.info("Creating project '{}' under organization '{}'", request.getName(), request.getOrganizationId());
-        Project project = projectService.createProject(request.getName(), request.getOrganizationId());
+        log.info("Creating project '{}' under team '{}'", request.getName(), request.getTeamId());
+        Project project = projectService.createProject(request.getName(), request.getTeamId());
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(project));
     }
 
     @GetMapping
-    public ResponseEntity<List<ProjectResponse>> listProjects() {
-        List<ProjectResponse> projects = projectService.getAllProjects().stream()
+    public ResponseEntity<List<ProjectResponse>> listProjects(@RequestParam UUID teamId) {
+        List<ProjectResponse> projects = projectService.getProjectsByTeamId(teamId).stream()
                 .map(this::toResponse)
                 .toList();
         return ResponseEntity.ok(projects);
@@ -56,7 +54,7 @@ public class ProjectController {
         return ProjectResponse.builder()
                 .id(project.getId().toString())
                 .name(project.getName())
-                .owner(project.getOrganizationId() != null ? project.getOrganizationId().toString() : null)
+                .owner(project.getTeamId() != null ? project.getTeamId().toString() : null)
                 .build();
     }
 }

@@ -38,11 +38,7 @@ public class DeploymentService {
 
                 Application app = applicationService.getApplication(event.applicationId());
 
-                Project project = projectService.getAllProjects().stream()
-                                .filter(p -> p.getId().equals(app.getProjectId()))
-                                .findFirst()
-                                .orElseThrow(() -> new IllegalStateException(
-                                                "Project not found for app: " + app.getId()));
+                Project project = projectService.getProjectById(app.getProjectId());
 
                 deploy(app, project, event.imageTag());
         }

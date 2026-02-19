@@ -17,8 +17,8 @@ public class ProjectService {
     private final KubernetesClient kubernetesClient;
 
     @Transactional
-    public Project createProject(String name, UUID organizationId) {
-        Project project = new Project(name, organizationId);
+    public Project createProject(String name, UUID teamId) {
+        Project project = new Project(name, teamId);
 
         kubernetesClient.namespaces().resource(
                 new NamespaceBuilder()
@@ -33,8 +33,8 @@ public class ProjectService {
         return projectRepository.save(project);
     }
 
-    public List<Project> getAllProjects() {
-        return projectRepository.findAll();
+    public List<Project> getProjectsByTeamId(UUID teamId) {
+        return projectRepository.findByTeamId(teamId);
     }
 
     public Project getProjectById(UUID id) {

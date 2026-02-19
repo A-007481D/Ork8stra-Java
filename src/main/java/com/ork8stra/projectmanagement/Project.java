@@ -19,13 +19,13 @@ public class Project {
     @Id
     private UUID id;
     private String name;
-    private UUID organizationId;
+    private UUID teamId;
     private String k8sNamespace;
 
-    public Project(String name, UUID organizationId) {
+    public Project(String name, UUID teamId) {
         this.id = UUID.randomUUID();
         this.name = name;
-        this.organizationId = organizationId;
+        this.teamId = teamId;
         this.k8sNamespace = generateNamespace(name);
     }
 

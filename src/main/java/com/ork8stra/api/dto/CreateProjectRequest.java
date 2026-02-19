@@ -18,7 +18,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateProjectRequest {
     private String name;
-    private UUID organizationId;
+    @com.fasterxml.jackson.annotation.JsonProperty("team_id")
+    private UUID teamId;
     private String gitUrl;
     private String branch;
     private String contextPath;
