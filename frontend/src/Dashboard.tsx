@@ -308,42 +308,71 @@ const ServiceDetail = ({ service, token, onUpdate, onDelete }: { service: Servic
 
     const fetchData = useCallback(async () => {
         try {
-            // Mocking since global deployments endpoint doesn't exist
-            setDeployments([]);
+            const res = await fetch(`http://localhost:8080/api/v1/apps/${service.id}/build`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const buildsData = await res.json();
+                // Map the builds into the UI's existing 'Deployment' shape for seamless rendering
+                const mappedBuilds = buildsData.map((b: any) => ({
+                    id: b.id,
+                    project_id: b.appId,
+                    service_id: b.appId, // Service maps to Application in backend
+                    status: b.status === "ACTIVE" ? "building" : (b.status === "COMPLETED" ? "success" : "failed"),
+                    created_at: b.startTime || new Date().toISOString()
+                }));
+                // Sort by newest first
+                mappedBuilds.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                setDeployments(mappedBuilds);
+
+                // Keep current deployment selected, or default to the most recent one
+                if (mappedBuilds.length > 0) {
+                    setCurrentDeployment(prev => prev || mappedBuilds[0]);
+                }
+            }
         } catch (e) { console.error(e); }
-    }, [token, service.id, currentDeployment]);
+    }, [token, service.id]);
 
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchData();
-        const interval = setInterval(fetchData, 3000);
+        const interval = setInterval(fetchData, 10000); // Polling every 10s to see if build status changed
         return () => clearInterval(interval);
     }, [fetchData]);
 
     useEffect(() => {
-        if (!currentDeployment) return;
-        const fetchLogs = async () => {
-            try {
-                const res = await fetch(`http://localhost:8080/api/v1/deployments/${currentDeployment.id}/logs`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (!res.ok) return;
-                const reader = res.body?.getReader();
-                if (!reader) return;
-                const decoder = new TextDecoder();
-                let accLogs: string[] = [];
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n').map(l => l.replace('data: ', '').trim()).filter(l => l.length > 0);
-                    accLogs = [...accLogs, ...lines];
-                    setLogs(accLogs.slice(-100)); // Update state effectively on every chunk
-                }
-            } catch (e) { console.error("Log fetch error", e); }
+        if (!currentDeployment || !service) return;
+
+        setLogs([]); // Clear logs when switching deployments
+
+        // Native SSE Integration
+        const url = `http://localhost:8080/api/v1/apps/${service.id}/build/${currentDeployment.id}/logs`;
+        const eventSource = new EventSource(url);
+
+        eventSource.onmessage = (event) => {
+            // Check for standard complete event
+            if (event.data === "Build log stream ended") {
+                eventSource.close();
+                return;
+            }
+
+            setLogs((prev) => {
+                const newLogs = [...prev, event.data];
+                // Keep only the last 200 lines to prevent memory issues in browser
+                return newLogs.slice(-200);
+            });
         };
-        fetchLogs();
-    }, [token, currentDeployment?.id, currentDeployment?.status, currentDeployment]);
+
+        eventSource.onerror = (error) => {
+            console.error("SSE Log Stream Error:", error);
+            eventSource.close(); // Clean up on critical failure
+        };
+
+        // Cleanup function runs when component unmounts or deployment changes
+        return () => {
+            eventSource.close();
+        };
+    }, [currentDeployment?.id, service?.id]);
 
     const handleRedeploy = async () => {
         if (!token) return;
