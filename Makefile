@@ -1,4 +1,4 @@
-.PHONY: help dev-frontend build-frontend install-frontend dev-backend build-backend docker-up docker-down clean reset
+.PHONY: help dev-frontend build-frontend install-frontend dev-backend build-backend docker-up docker-down clean reset run stop
 
 # Ensure Java 21 is used for Maven commands
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
@@ -37,6 +37,17 @@ docker-logs: ## View logs for the infrastructure containers
 	docker-compose logs -f
 
 # --- Utility Commands ---
+
+run: docker-up ## Start the entire application (Infrastructure, Backend, Frontend) in development mode
+	@echo "Starting backend and frontend..."
+	@# Run backend in background and frontend in foreground
+	./mvnw spring-boot:run & cd frontend && npm run dev
+
+stop: docker-down ## Stop all infrastructure and background processes
+	@echo "Stopping application processes..."
+	@pkill -f "spring-boot:run" || true
+	@pkill -f "vite" || true
+	@echo "All processes stopped."
 
 clean: ## Clean Maven target directory and frontend dist folder
 	./mvnw clean
