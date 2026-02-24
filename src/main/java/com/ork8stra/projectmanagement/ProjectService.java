@@ -20,15 +20,20 @@ public class ProjectService {
     public Project createProject(String name, UUID teamId) {
         Project project = new Project(name, teamId);
 
-        kubernetesClient.namespaces().resource(
-                new NamespaceBuilder()
-                        .withNewMetadata()
-                        .withName(project.getK8sNamespace())
-                        .addToLabels("managed-by", "ork8stra")
-                        .addToLabels("project-id", project.getId().toString())
-                        .endMetadata()
-                        .build())
-                .create();
+        try {
+            kubernetesClient.namespaces().resource(
+                    new NamespaceBuilder()
+                            .withNewMetadata()
+                            .withName(project.getK8sNamespace())
+                            .addToLabels("managed-by", "ork8stra")
+                            .addToLabels("project-id", project.getId().toString())
+                            .endMetadata()
+                            .build())
+                    .create();
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(ProjectService.class)
+                    .warn("Failed to create K8s namespace for project '{}': {}", name, e.getMessage());
+        }
 
         return projectRepository.save(project);
     }
@@ -45,7 +50,12 @@ public class ProjectService {
     @Transactional
     public void deleteProject(UUID id) {
         Project project = getProjectById(id);
-        kubernetesClient.namespaces().withName(project.getK8sNamespace()).delete();
+        try {
+            kubernetesClient.namespaces().withName(project.getK8sNamespace()).delete();
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(ProjectService.class)
+                    .warn("Failed to delete K8s namespace for project '{}': {}", project.getName(), e.getMessage());
+        }
         projectRepository.delete(project);
     }
 }
