@@ -1,38 +1,46 @@
-# Ork8stra Makefile
+.PHONY: help dev-frontend build-frontend install-frontend dev-backend build-backend docker-up docker-down clean reset
 
-.PHONY: help build run test up down logs clean shell
+# Ensure Java 21 is used for Maven commands
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 
-# Default target
-help:
-	@echo "Available commands:"
-	@echo "  make build      - Build the project (skip tests)"
-	@echo "  make run        - Run the application locally"
-	@echo "  make test       - Run tests"
-	@echo "  make up         - Start infrastructure (Docker Compose)"
-	@echo "  make down       - Stop infrastructure"
-	@echo "  make logs       - View infrastructure logs"
-	@echo "  make clean      - Clean target directory"
-	@echo "  make all        - Full reset: clean, build, up"
+help: ## Show this help menu
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-build:
-	./mvnw clean package -DskipTests
+# --- Frontend Commands ---
 
-run:
+dev-frontend: ## Start the React/Vite frontend development server (runs on port 5173)
+	cd frontend && npm run dev
+
+build-frontend: ## Build the React frontend for production
+	cd frontend && npm run build
+
+install-frontend: ## Install frontend NPM dependencies
+	cd frontend && npm install
+
+# --- Backend Commands ---
+
+dev-backend: ## Start the Spring Boot backend development server (runs on port 8080)
 	./mvnw spring-boot:run
 
-test:
-	./mvnw test
+build-backend: ## Build the Spring Boot backend JAR (skips tests)
+	./mvnw clean package -DskipTests
 
-up:
+# --- Infrastructure Commands ---
+
+docker-up: ## Start the required infrastructure (PostgreSQL, Redis, MinIO, RabbitMQ)
 	docker-compose up -d
 
-down:
+docker-down: ## Stop and remove the infrastructure containers
 	docker-compose down
 
-logs:
+docker-logs: ## View logs for the infrastructure containers
 	docker-compose logs -f
 
-clean:
-	./mvnw clean
+# --- Utility Commands ---
 
-all: down clean build up
+clean: ## Clean Maven target directory and frontend dist folder
+	./mvnw clean
+	rm -rf frontend/dist
+
+reset: docker-down clean ## Stop containers, clean build artifacts, and remove frontend node_modules
+	rm -rf frontend/node_modules
