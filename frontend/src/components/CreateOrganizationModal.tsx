@@ -20,7 +20,7 @@ export default function CreateOrganizationModal({ isOpen, onClose, onCreated, to
         e.preventDefault();
         setLoading(true);
         try {
-            const res = await fetch("http://localhost:8080/organizations", {
+            const res = await fetch("/api/v1/orgs", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

@@ -25,7 +25,7 @@ export default function SettingsMembers({ org, token }: SettingsMembersProps) {
     const fetchMembers = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8080/organizations/${org.id}/members`, {
+            const res = await fetch(`/api/v1/orgs/${org.id}/members`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
             if (res.ok) {
@@ -47,7 +47,7 @@ export default function SettingsMembers({ org, token }: SettingsMembersProps) {
         e.preventDefault();
         setInviting(true);
         try {
-            const res = await fetch(`http://localhost:8080/organizations/${org.id}/invites`, {
+            const res = await fetch(`/api/v1/orgs/${org.id}/invites`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

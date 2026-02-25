@@ -236,7 +236,7 @@ export default function CreateServiceWizard({
         if (!teamId) return;
         setLoadingProjects(true);
         try {
-            const res = await fetch(`http://localhost:8080/projects?team_id=${teamId}`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`/api/v1/projects?team_id=${teamId}`, { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) {
                 const p = await res.json();
                 setExistingProjects(p || []);
@@ -252,7 +252,7 @@ export default function CreateServiceWizard({
 
     const checkGitHubConnection = useCallback(async () => {
         try {
-            const res = await fetch("http://localhost:8080/github/connection", { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch("/api/v1/github/connection", { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) {
                 const d = await res.json();
                 setGithubConnection(d);
@@ -263,7 +263,7 @@ export default function CreateServiceWizard({
     const fetchRepos = useCallback(async () => {
         setLoadingRepos(true);
         try {
-            const res = await fetch("http://localhost:8080/github/repos", { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch("/api/v1/github/repos", { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) {
                 const d = await res.json();
                 setRepos(d || []);
@@ -274,7 +274,7 @@ export default function CreateServiceWizard({
     const fetchBranches = useCallback(async (owner: string, repo: string) => {
         setLoadingBranches(true);
         try {
-            const res = await fetch(`http://localhost:8080/github/branches?owner=${owner}&repo=${repo}`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`/api/v1/github/branches?owner=${owner}&repo=${repo}`, { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) {
                 const d = await res.json();
                 setBranches(d || []);
@@ -284,7 +284,7 @@ export default function CreateServiceWizard({
 
     const handleGitHubConnect = async () => {
         try {
-            const res = await fetch("http://localhost:8080/github/auth", { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch("/api/v1/github/auth", { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) {
                 const d = await res.json();
                 window.open(d.url, "_blank", "width=600,height=700");
@@ -299,7 +299,7 @@ export default function CreateServiceWizard({
             if (event.data.type === "GITHUB_CONNECTED") {
                 const { access_token, username } = event.data.data;
                 try {
-                    const res = await fetch("http://localhost:8080/github/connect", {
+                    const res = await fetch("/api/v1/github/connect", {
                         method: "POST",
                         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
                         body: JSON.stringify({ access_token, username }),
@@ -332,7 +332,7 @@ export default function CreateServiceWizard({
 
             // 1. Create Project if needed
             if (data.isNewProject) {
-                const pRes = await fetch("http://localhost:8080/projects", {
+                const pRes = await fetch("/api/v1/projects", {
                     method: "POST",
                     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
                     body: JSON.stringify({ name: data.newProjectName, team_id: teamId })
@@ -350,7 +350,7 @@ export default function CreateServiceWizard({
                 return acc;
             }, {} as Record<string, string>);
 
-            const sRes = await fetch(`http://localhost:8080/api/v1/projects/${finalProjectId}/apps`, {
+            const sRes = await fetch(`/api/v1/projects/${finalProjectId}/apps`, {
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
                 body: JSON.stringify({

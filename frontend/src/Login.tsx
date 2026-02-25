@@ -14,7 +14,7 @@ export default function Login() {
         setError("");
 
         try {
-            const res = await fetch("http://localhost:8080/api/v1/auth/login", {
+            const res = await fetch("/api/v1/auth/login", {
                 method: "POST",
                 body: JSON.stringify({ username, password }),
                 headers: { "Content-Type": "application/json" },

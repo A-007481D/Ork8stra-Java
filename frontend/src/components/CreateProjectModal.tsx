@@ -29,7 +29,7 @@ export default function CreateProjectModal({
         setError("");
 
         try {
-            const res = await fetch("http://localhost:8080/api/v1/projects", {
+            const res = await fetch("/api/v1/projects", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

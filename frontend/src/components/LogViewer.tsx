@@ -33,7 +33,7 @@ export default function LogViewer({ deploymentId, onClose, token }: LogViewerPro
         const controller = new AbortController();
         const fetchLogs = async () => {
             try {
-                const response = await fetch(`http://localhost:8080/deployments/${deploymentId}/logs`, {
+                const response = await fetch(`/api/v1/deployments/${deploymentId}/logs`, {
                     headers: {
                         "Authorization": `Bearer ${token}`
                     },

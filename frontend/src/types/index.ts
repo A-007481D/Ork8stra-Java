@@ -121,6 +121,7 @@ export interface Service {
     start_command?: string;
     dockerfile_path?: string;
     env_vars?: string;
+    env?: Record<string, string>;
 }
 
 export type ViewState =

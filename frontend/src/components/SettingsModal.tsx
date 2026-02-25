@@ -27,8 +27,12 @@ export default function SettingsModal({ isOpen, onClose, service, token, onUpdat
     const [envVars, setEnvVars] = useState<{ key: string, value: string }[]>([]);
 
     useEffect(() => {
-        // Parse existing env vars
-        if (service.env_vars) {
+        // Parse existing env vars natively from the mapped object
+        if (service.env && typeof service.env === 'object') {
+            const arr = Object.keys(service.env).map(k => ({ key: k, value: service.env![k] }));
+            setEnvVars(arr);
+        } else if (service.env_vars && typeof service.env_vars === 'string') {
+            // Fallback for legacy stringified data
             try {
                 const parsed = JSON.parse(service.env_vars);
                 const arr = Object.keys(parsed).map(k => ({ key: k, value: parsed[k] }));
@@ -39,26 +43,25 @@ export default function SettingsModal({ isOpen, onClose, service, token, onUpdat
         } else {
             setEnvVars([]);
         }
-    }, [service.env_vars, isOpen]);
+    }, [service.env, service.env_vars, isOpen]);
 
     const handleSave = async () => {
         try {
-            // Convert Env array to object
+            // Convert Env array to object mapping
             const envObj: Record<string, string> = {};
             envVars.forEach(e => {
                 if (e.key) envObj[e.key] = e.value;
             });
 
+            // Map UI configuration exactly to the Spring Boot CreateApplicationRequest DTO
             const body = {
-                branch,
-                port: parseInt(port),
-                build_command: buildCommand,
-                start_command: startCommand,
-                env_vars: envObj
+                gitRepoUrl: service.repo_url, // Ensure we don't drop the repo URL
+                buildBranch: branch,
+                envVars: envObj
             };
 
-            const res = await fetch(`http://localhost:8080/services/${service.id}`, {
-                method: 'PATCH',
+            const res = await fetch(`/api/v1/apps/${service.id}`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -76,21 +79,11 @@ export default function SettingsModal({ isOpen, onClose, service, token, onUpdat
     };
 
     const handleDelete = async () => {
-        if (!confirm("Are you sure you want to delete this service? This action cannot be undone.")) return;
+        if (!confirm("Are you sure you want to delete this application? This action cannot be undone.")) return;
 
-        try {
-            const res = await fetch(`http://localhost:8080/services/${service.id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (res.ok) {
-                onDelete();
-                onClose();
-            }
-        } catch (e) {
-            console.error(e);
-        }
+        // Execute the prop-injected REST logic from Dashboard.tsx
+        onDelete();
+        onClose();
     };
 
     if (!isOpen) return null;
