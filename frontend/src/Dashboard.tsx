@@ -1114,6 +1114,7 @@ export default function Dashboard() {
                         token={token!}
                         teamId={currentTeam?.id || ''}
                         initialServiceType={initialServiceType}
+                        initialProjectId={viewState.project.id}
                     />
                 )}
 
