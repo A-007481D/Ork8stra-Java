@@ -11,6 +11,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -72,6 +73,87 @@ public class GithubService {
             }
         }
         throw new RuntimeException("Failed to exchange GitHub access token");
+    }
+
+    public com.ork8stra.api.dto.github.GithubUserProfile exchangeCodeForUserInfo(String code) {
+        log.info("Exchanging GitHub OAuth code for user info");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("client_id", clientId);
+        body.add("client_secret", clientSecret);
+        body.add("code", code);
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                "https://github.com/login/oauth/access_token",
+                request,
+                Map.class);
+
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            String accessToken = (String) response.getBody().get("access_token");
+            if (accessToken != null) {
+                return fetchUserProfile(accessToken);
+            }
+        }
+        throw new RuntimeException("Failed to exchange GitHub access token");
+    }
+
+    private com.ork8stra.api.dto.github.GithubUserProfile fetchUserProfile(String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        headers.setAccept(List.of(MediaType.valueOf("application/vnd.github.v3+json")));
+
+        // 1. Get User Profile
+        ResponseEntity<Map> userResponse = restTemplate.exchange(
+                "https://api.github.com/user",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                Map.class);
+
+        if (!userResponse.getStatusCode().is2xxSuccessful() || userResponse.getBody() == null) {
+            throw new RuntimeException("Failed to fetch GitHub user profile");
+        }
+
+        Map<String, Object> userData = userResponse.getBody();
+        String username = (String) userData.get("login");
+        String id = String.valueOf(userData.get("id"));
+        String email = (String) userData.get("email");
+
+        // 2. If email is null in profile, fetch from /user/emails
+        if (email == null) {
+            ResponseEntity<List<Map<String, Object>>> emailsResponse = restTemplate.exchange(
+                    "https://api.github.com/user/emails",
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    new ParameterizedTypeReference<>() {
+                    });
+
+            if (emailsResponse.getStatusCode().is2xxSuccessful() && emailsResponse.getBody() != null) {
+                for (Map<String, Object> emailObj : emailsResponse.getBody()) {
+                    Boolean primary = (Boolean) emailObj.get("primary");
+                    Boolean verified = (Boolean) emailObj.get("verified");
+                    if (Boolean.TRUE.equals(primary) && Boolean.TRUE.equals(verified)) {
+                        email = (String) emailObj.get("email");
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (email == null) {
+            throw new RuntimeException("Could not find a valid email for GitHub user");
+        }
+
+        return com.ork8stra.api.dto.github.GithubUserProfile.builder()
+                .id(id)
+                .username(username)
+                .email(email)
+                .build();
     }
 
     public boolean isConnected(UUID userId) {

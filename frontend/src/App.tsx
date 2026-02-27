@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import Login from './Login';
 import Register from './Register';
+import OAuthCallback from './OAuthCallback';
 import Dashboard from './Dashboard';
 import Projects from './Projects';
 import Layout from './Layout';
@@ -16,6 +17,7 @@ function App() {
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/auth/github/callback" element={<OAuthCallback />} />
 
             {/* Protected Routes wrapped in Layout */}
             <Route element={<Layout />}>

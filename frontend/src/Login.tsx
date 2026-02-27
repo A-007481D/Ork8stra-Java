@@ -8,6 +8,20 @@ export default function Login() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
+    const handleGithubLogin = async () => {
+        try {
+            const res = await fetch("/api/v1/auth/github/url");
+            if (res.ok) {
+                const data = await res.json();
+                window.location.href = data.url;
+            } else {
+                setError("Could not initiate GitHub login.");
+            }
+        } catch {
+            setError("Unable to connect to server");
+        }
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -92,7 +106,11 @@ export default function Login() {
                     </div>
 
                     <div className="space-y-4">
-                        <button type="button" className="w-full bg-[#1A1C20] hover:bg-[#22242A] border border-white/10 text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-3 transition-all active:scale-95">
+                        <button
+                            type="button"
+                            onClick={handleGithubLogin}
+                            className="w-full bg-[#1A1C20] hover:bg-[#22242A] border border-white/10 text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-3 transition-all active:scale-95"
+                        >
                             <Github className="w-5 h-5" />
                             Continue with GitHub
                         </button>
