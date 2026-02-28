@@ -26,6 +26,7 @@ public class KanikoJobWatcher {
     public void startWatching() {
         log.info("Starting Kaniko Job Watcher for ork8stra builds");
         watch = kubernetesClient.batch().v1().jobs()
+                .inAnyNamespace()
                 .withLabel("managed-by", "ork8stra")
                 .withLabel("job-type", "build")
                 .watch(new Watcher<>() {

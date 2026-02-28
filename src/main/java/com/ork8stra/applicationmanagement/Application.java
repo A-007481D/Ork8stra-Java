@@ -22,6 +22,7 @@ public class Application {
     private UUID projectId;
     private String gitRepoUrl;
     private String buildBranch;
+    private String dockerfilePath;
 
     @ElementCollection
     @CollectionTable(name = "application_env_vars", joinColumns = @JoinColumn(name = "application_id"))

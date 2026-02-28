@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5435}/${POSTGRES_DB:ork8stra}
     username: ${POSTGRES_USER:postgres}
-    password: ${POSTGRES_PASSWORD:password}
+    password: ${POSTGRES_PASSWORD:malik}
   jpa:
     hibernate:
       ddl-auto: update
@@ -21,7 +21,7 @@ spring:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:ork8stra}
-    password: ${RABBITMQ_PASSWORD:password}
+    password: ${RABBITMQ_PASSWORD:ork8stra}
 
   # Redis Configuration
   data:
@@ -32,12 +32,12 @@ spring:
 # jwt conf
 app:
   jwt:
-    secret: ${JWT_SECRET:your_jwt_secret_key_base64}
+    secret: ${JWT_SECRET:dGhpc2lzYXZlcnlsb25nc2VjcmV0a2V5Zm9yand0dG9rZW5zYW5kaXRzaG91bGRiZWF0bGVhc3QyNTZiaXRz}
     expiration-ms: 86400000
     issuer: ork8stra
 
 # oauth conf
 oauth2:
   github:
-    client-id: ${GITHUB_CLIENT_ID:}
-    client-secret: ${GITHUB_CLIENT_SECRET:}
+    client-id: ${GITHUB_CLIENT_ID:Ov23limjKNqfBJLABEXE}
+    client-secret: ${GITHUB_CLIENT_SECRET:46f239ff0ae5a34ecc8b9cd426e5b38acc9f8504}

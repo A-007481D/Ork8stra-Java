@@ -25,5 +25,8 @@ public class CreateApplicationRequest {
     @Builder.Default
     private String buildBranch = "main";
 
+    @Builder.Default
+    private String dockerfilePath = "Dockerfile";
+
     private Map<String, String> envVars;
 }

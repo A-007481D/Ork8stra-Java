@@ -18,5 +18,6 @@ public class ApplicationResponse {
     private UUID projectId;
     private String gitRepoUrl;
     private String buildBranch;
+    private String dockerfilePath;
     private Map<String, String> envVars;
 }

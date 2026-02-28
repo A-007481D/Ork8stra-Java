@@ -1,5 +1,6 @@
 package com.ork8stra.buildengine;
 
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,9 +35,21 @@ public class BuildLogService {
 
         logExecutor.execute(() -> {
             try {
-                var pods = kubernetesClient.pods()
-                        .withLabel("job-name", jobName)
-                        .list().getItems();
+                List<Pod> pods = List.of();
+                for (int attempt = 0; attempt < 30; attempt++) {
+                    pods = kubernetesClient.pods()
+                            .inAnyNamespace()
+                            .withLabel("job-name", jobName)
+                            .list()
+                            .getItems();
+
+                    if (!pods.isEmpty())
+                        break;
+
+                    log.debug("Waiting for pod for job '{}' (attempt {}/30)", jobName, attempt + 1);
+                    emitter.send(SseEmitter.event().name("log").data("Waiting for build pod to start..."));
+                    Thread.sleep(1000);
+                }
 
                 if (pods.isEmpty()) {
                     emitter.send(SseEmitter.event()
@@ -82,8 +96,6 @@ public class BuildLogService {
                 emitter.completeWithError(e);
             }
         });
-
-        emitter.onTimeout(emitter::complete);
 
         return emitter;
     }
