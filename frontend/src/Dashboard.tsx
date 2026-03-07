@@ -5,7 +5,7 @@ import {
     Inbox, Layers,
     Box, Filter, List as ListIcon,
     Terminal, Activity, ArrowUpRight, Server,
-    GitBranch, RefreshCw, Play,
+    GitBranch, RefreshCw, Play, Square, RotateCcw,
     Settings, Building2, Database, Layout as LayoutIcon, Cpu
 } from "lucide-react";
 
@@ -314,8 +314,7 @@ const ServiceDetail = ({ service, token, onUpdate, onDelete }: { service: Servic
     const [currentDeployment, setCurrentDeployment] = useState<Deployment | null>(null);
     const [deployments, setDeployments] = useState<Deployment[]>([]);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-
+    const [lifecycleLoading, setLifecycleLoading] = useState<'stop' | 'start' | 'restart' | null>(null);
 
     const fetchData = useCallback(async () => {
         try {
@@ -432,6 +431,19 @@ const ServiceDetail = ({ service, token, onUpdate, onDelete }: { service: Servic
         } catch (e) { console.error("Redeploy error", e); }
     };
 
+    const handleLifecycleAction = async (action: 'stop' | 'start' | 'restart') => {
+        if (!token) return;
+        setLifecycleLoading(action);
+        try {
+            await fetch(`/api/v1/apps/${service.id}/${action}`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setTimeout(() => fetchData(), 1500);
+        } catch (e) { console.error(`${action} error`, e); }
+        finally { setLifecycleLoading(null); }
+    };
+
     return (
         <div className="flex-1 flex flex-col overflow-hidden h-full">
             {/* Header / Actions */}
@@ -479,6 +491,37 @@ const ServiceDetail = ({ service, token, onUpdate, onDelete }: { service: Servic
                         {currentDeployment?.status === 'building' ? <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-2" />}
                         Redeploy
                     </Button>
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleLifecycleAction('stop')}
+                        disabled={!!lifecycleLoading}
+                        title="Stop application"
+                        className="bg-[#222] border-[#333] hover:bg-red-900/40 hover:border-red-700 text-[#CCC] hover:text-red-400 transition-colors"
+                    >
+                        {lifecycleLoading === 'stop' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Square className="w-3.5 h-3.5" />}
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleLifecycleAction('start')}
+                        disabled={!!lifecycleLoading}
+                        title="Start application"
+                        className="bg-[#222] border-[#333] hover:bg-emerald-900/40 hover:border-emerald-700 text-[#CCC] hover:text-emerald-400 transition-colors"
+                    >
+                        {lifecycleLoading === 'start' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleLifecycleAction('restart')}
+                        disabled={!!lifecycleLoading}
+                        title="Restart application"
+                        className="bg-[#222] border-[#333] hover:bg-amber-900/40 hover:border-amber-700 text-[#CCC] hover:text-amber-400 transition-colors"
+                    >
+                        {lifecycleLoading === 'restart' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                    </Button>
+                    <div className="h-6 w-[1px] bg-[#222]" />
                     <Button size="sm" variant="secondary" onClick={() => setIsSettingsOpen(true)} className="bg-[#222] border-[#333] hover:bg-[#333] text-[#CCC]">
                         <Settings className="w-3.5 h-3.5" />
                     </Button>
