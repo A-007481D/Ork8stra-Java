@@ -315,6 +315,7 @@ const ServiceDetail = ({ service, token, onUpdate, onDelete }: { service: Servic
     const [deployments, setDeployments] = useState<Deployment[]>([]);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [lifecycleLoading, setLifecycleLoading] = useState<'stop' | 'start' | 'restart' | null>(null);
+    const [metrics, setMetrics] = useState<{ cpuMillicores: number; memoryMiB: number; podCount: number } | null>(null);
 
     const fetchData = useCallback(async () => {
         try {
@@ -443,6 +444,27 @@ const ServiceDetail = ({ service, token, onUpdate, onDelete }: { service: Servic
         } catch (e) { console.error(`${action} error`, e); }
         finally { setLifecycleLoading(null); }
     };
+
+    const handleRollback = async (buildId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!token) return;
+        try {
+            await fetch(`/api/v1/apps/${service.id}/rollback/${buildId}`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            fetchData();
+        } catch (err) { console.error('Rollback error', err); }
+    };
+
+    useEffect(() => {
+        const eventSource = new EventSource(`/api/v1/apps/${service.id}/metrics`);
+        eventSource.addEventListener('metrics', (event: MessageEvent) => {
+            try { setMetrics(JSON.parse(event.data)); } catch { /* ignore */ }
+        });
+        eventSource.onerror = () => eventSource.close();
+        return () => eventSource.close();
+    }, [service.id]);
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden h-full">
@@ -574,8 +596,7 @@ const ServiceDetail = ({ service, token, onUpdate, onDelete }: { service: Servic
                                 <div
                                     key={d.id}
                                     onClick={() => setCurrentDeployment(d)}
-                                    className={`px-4 py-3 border-b border-[#1A1A1A] transition-colors flex items-center justify-between group cursor-pointer ${currentDeployment?.id === d.id ? 'bg-[#1A1A1A]' : 'hover:bg-[#151515]'
-                                        }`}
+                                    className={`px-4 py-3 border-b border-[#1A1A1A] transition-colors flex items-center justify-between group cursor-pointer ${currentDeployment?.id === d.id ? 'bg-[#1A1A1A]' : 'hover:bg-[#151515]'}`}
                                 >
                                     <div className="flex flex-col gap-1">
                                         <div className="flex items-center gap-2">
@@ -587,11 +608,49 @@ const ServiceDetail = ({ service, token, onUpdate, onDelete }: { service: Servic
                                         </div>
                                         <span className="text-[10px] text-[#555]">{d.created_at ? new Date(d.created_at).toLocaleString() : ''}</span>
                                     </div>
-                                    <span className="font-mono text-[10px] text-[#444] group-hover:text-[#666] transition-colors bg-[#111] px-1.5 py-0.5 rounded border border-[#222]">
-                                        {d.id.substring(0, 4)}
-                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                        {d.status === 'success' && (
+                                            <button
+                                                onClick={(e) => handleRollback(d.id, e)}
+                                                title="Rollback to this version"
+                                                className="opacity-0 group-hover:opacity-100 p-1 rounded text-[#555] hover:text-amber-400 hover:bg-amber-900/30 transition-all"
+                                            >
+                                                <RotateCcw className="w-3 h-3" />
+                                            </button>
+                                        )}
+                                        <span className="font-mono text-[10px] text-[#444] group-hover:text-[#666] transition-colors bg-[#111] px-1.5 py-0.5 rounded border border-[#222]">
+                                            {d.id.substring(0, 4)}
+                                        </span>
+                                    </div>
                                 </div>
                             ))}
+                        </div>
+                    </Card>
+
+                    <Card className="bg-[#0A0A0A] border-[#222]">
+                        <CardHeader className="py-2.5 px-4 border-b border-[#222] bg-[#111] flex flex-row items-center justify-between">
+                            <CardTitle className="text-xs font-medium text-[#888] uppercase tracking-wider">Live Metrics</CardTitle>
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        </CardHeader>
+                        <div className="p-4 space-y-3">
+                            <div className="flex justify-between text-xs items-center">
+                                <span className="text-[#666] flex items-center gap-1.5"><Cpu className="w-3 h-3" /> CPU</span>
+                                <span className="text-[#E3E3E3] font-mono">{metrics ? `${metrics.cpuMillicores}m` : '---'}</span>
+                            </div>
+                            <div className="w-full h-1 bg-[#1A1A1A] rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: metrics ? `${Math.min((metrics.cpuMillicores / 1000) * 100, 100)}%` : '0%' }} />
+                            </div>
+                            <div className="flex justify-between text-xs items-center">
+                                <span className="text-[#666] flex items-center gap-1.5"><Database className="w-3 h-3" /> Memory</span>
+                                <span className="text-[#E3E3E3] font-mono">{metrics ? `${metrics.memoryMiB} MiB` : '---'}</span>
+                            </div>
+                            <div className="w-full h-1 bg-[#1A1A1A] rounded-full overflow-hidden">
+                                <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: metrics ? `${Math.min((metrics.memoryMiB / 512) * 100, 100)}%` : '0%' }} />
+                            </div>
+                            <div className="flex justify-between text-xs items-center pt-1">
+                                <span className="text-[#666]">Pods</span>
+                                <span className="text-[#E3E3E3] font-mono">{metrics?.podCount ?? '---'}</span>
+                            </div>
                         </div>
                     </Card>
 
