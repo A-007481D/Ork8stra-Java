@@ -8,10 +8,9 @@ import com.ork8stra.infrastructure.messaging.EventPublisher;
 import com.ork8stra.projectmanagement.ProjectService;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
-import io.fabric8.kubernetes.api.model.ServiceBuilder;
-import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
-import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -28,6 +27,9 @@ public class DeploymentService {
         private final ApplicationService applicationService;
         private final ProjectService projectService;
         private final EventPublisher eventPublisher;
+
+        @Value("${kubelite.base-domain}")
+        private String baseDomain;
 
         @ApplicationModuleListener
         @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -97,6 +99,39 @@ public class DeploymentService {
                                                 .withTargetPort(new IntOrString(8080))
                                                 .endPort()
                                                 .withType("ClusterIP")
+                                                .endSpec()
+                                                .build())
+                                .createOrReplace();
+
+                // Create Ingress
+                String host = appName.toLowerCase().replaceAll("[^a-z0-9]", "") + "."
+                                + project.getName().toLowerCase().replaceAll("[^a-z0-9]", "") + "."
+                                + baseDomain;
+
+                kubernetesClient.network().v1().ingresses().inNamespace(namespace).resource(
+                                new IngressBuilder()
+                                                .withNewMetadata()
+                                                .withName(appName + "-ingress")
+                                                .addToLabels("app", appName)
+                                                .endMetadata()
+                                                .withNewSpec()
+                                                .addNewRule()
+                                                .withHost(host)
+                                                .withNewHttp()
+                                                .addNewPath()
+                                                .withPath("/")
+                                                .withPathType("Prefix")
+                                                .withNewBackend()
+                                                .withNewService()
+                                                .withName(appName + "-svc")
+                                                .withNewPort()
+                                                .withNumber(80)
+                                                .endPort()
+                                                .endService()
+                                                .endBackend()
+                                                .endPath()
+                                                .endHttp()
+                                                .endRule()
                                                 .endSpec()
                                                 .build())
                                 .createOrReplace();

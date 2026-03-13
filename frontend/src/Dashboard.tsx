@@ -312,7 +312,7 @@ const ServicesGrid = ({ services, loading, onSelect, onAdd }: { services: Servic
     </div>
 );
 
-const ServiceDetail = ({ service, token, onUpdate, onDelete }: { service: Service, token: string, onUpdate: () => void, onDelete: () => void }) => {
+const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { service: Service, project: Project, token: string, onUpdate: () => void, onDelete: () => void }) => {
     const [logs, setLogs] = useState<string[]>([]);
     const [currentDeployment, setCurrentDeployment] = useState<Deployment | null>(null);
     const [deployments, setDeployments] = useState<Deployment[]>([]);
@@ -691,6 +691,19 @@ const ServiceDetail = ({ service, token, onUpdate, onDelete }: { service: Servic
                             <div className="flex justify-between text-xs items-center">
                                 <span className="text-[#666]">Builder</span>
                                 <span className="text-[#AAA] font-mono bg-[#151515] px-2 py-0.5 rounded border border-[#222]">nixpacks</span>
+                            </div>
+                            <div className="h-[1px] bg-[#222] my-1" />
+                            <div className="space-y-1.5">
+                                <span className="text-[10px] font-semibold text-[#555] uppercase tracking-wider">Public URL</span>
+                                <a
+                                    href={`http://${service.name.toLowerCase().replaceAll(/[^a-z0-9]/g, "")}.${project.name.toLowerCase().replaceAll(/[^a-z0-9]/g, "")}.local.kubelite.io`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-colors group/link"
+                                >
+                                    <span className="truncate">{service.name.toLowerCase().replaceAll(/[^a-z0-9]/g, "")}.{project.name.toLowerCase().replaceAll(/[^a-z0-9]/g, "")}.local.kubelite.io</span>
+                                    <ArrowUpRight className="w-3 h-3 shrink-0 opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                                </a>
                             </div>
                         </div>
                     </Card>
@@ -1224,7 +1237,7 @@ export default function Dashboard() {
                             )}
 
                             {viewState.type === 'SERVICE' && (
-                                <ServiceDetail service={viewState.service} token={token!} onUpdate={fetchServices} onDelete={handleDeleteComplete} />
+                                <ServiceDetail service={viewState.service} project={viewState.project} token={token!} onUpdate={fetchServices} onDelete={handleDeleteComplete} />
                             )}
                         </>
                     )}

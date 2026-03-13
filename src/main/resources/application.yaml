@@ -47,3 +47,6 @@ minio:
   access-key: ${MINIO_ACCESS_KEY:minioadmin}
   secret-key: ${MINIO_SECRET_KEY:minioadmin}
   bucket: ${MINIO_BUCKET:ork8stra-logs}
+
+kubelite:
+  base-domain: ${KUBELITE_BASE_DOMAIN:local.kubelite.io}
