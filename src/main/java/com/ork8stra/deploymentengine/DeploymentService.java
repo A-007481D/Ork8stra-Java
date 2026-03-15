@@ -108,17 +108,20 @@ public class DeploymentService {
                                 .createOrReplace();
 
                 // Create Ingress
-                String host = appName.toLowerCase().replaceAll("[^a-z0-9]", "") + "."
-                                + project.getName().toLowerCase().replaceAll("[^a-z0-9]", "") + "."
-                                + baseDomain;
+                // Create Ingress with "Premium" hierarchical host
+                String projectPart = project.getName().toLowerCase().replaceAll("[^a-z0-9]", "");
+                String appPart = appName.toLowerCase().replaceAll("[^a-z0-9]", "");
+
+                // Using sslip.io for transparent wildcard DNS resolution back to minikube
+                String host = String.format("%s.%s.%s", appPart, projectPart, baseDomain);
 
                 kubernetesClient.network().v1().ingresses().inNamespace(namespace).resource(
                                 new IngressBuilder()
                                                 .withNewMetadata()
                                                 .withName(appName + "-ingress")
                                                 .addToLabels("app", appName)
-                                                .addToAnnotations("cert-manager.io/cluster-issuer",
-                                                                "kubelite-selfsigned")
+                                                .addToAnnotations("cert-manager.io/cluster-issuer", "kubelite-selfsigned")
+                                                .addToAnnotations("nginx.ingress.kubernetes.io/ssl-redirect", "true")
                                                 .endMetadata()
                                                 .withNewSpec()
                                                 .withTls(new IngressTLSBuilder()
