@@ -9,5 +9,5 @@ public interface EventPublisher {
 
     void publishBuildStatus(String buildId, String status, String imageTag);
 
-    void publishDeploymentStatus(String deploymentId, String applicationId, String status);
+    void publishDeploymentStatus(String deploymentId, String applicationId, String status, String url);
 }

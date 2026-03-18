@@ -12,6 +12,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql
 
   rabbitmq:
     image: 'rabbitmq:3-management'
@@ -26,6 +28,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
   redis:
     image: 'redis:7-alpine'
@@ -36,6 +40,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - redis_data:/data
 
   minio:
     image: 'minio/minio:latest'
@@ -51,3 +57,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - minio_data:/data
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  redis_data:
+  minio_data:

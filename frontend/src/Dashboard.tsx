@@ -28,6 +28,22 @@ import { Badge } from "./components/ui/Badge";
 import { Button } from "./components/ui/Button";
 import { Card, CardHeader, CardTitle } from "./components/ui/Card";
 
+const mapDeploymentStatusToUi = (status?: string | null): Service['status'] => {
+    switch (status) {
+        case 'HEALTHY':
+            return 'live';
+        case 'STOPPED':
+            return 'stopped';
+        case 'RESTARTING':
+        case 'IN_PROGRESS':
+            return 'restarting';
+        case 'FAILED':
+        case 'UNHEALTHY':
+            return 'failed';
+        default:
+            return 'building';
+    }
+};
 
 // --- COMPONENTS ---
 
@@ -316,47 +332,64 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
     const [logs, setLogs] = useState<string[]>([]);
     const [currentDeployment, setCurrentDeployment] = useState<Deployment | null>(null);
     const [deployments, setDeployments] = useState<Deployment[]>([]);
+    const [runtimeStatus, setRuntimeStatus] = useState<Service['status']>(service.status || 'building');
+    const [liveUrl, setLiveUrl] = useState<string | null>(service.live_url || null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [lifecycleLoading, setLifecycleLoading] = useState<'stop' | 'start' | 'restart' | null>(null);
     const [metrics, setMetrics] = useState<{ cpuMillicores: number; memoryMiB: number; podCount: number } | null>(null);
     const { toasts, addToast, removeToast } = useToast();
 
+    const mapBuildStatusToUi = (status: string): 'building' | 'success' | 'failed' => {
+        if (status === 'RUNNING' || status === 'PENDING') return 'building';
+        if (status === 'SUCCESS') return 'success';
+        if (status === 'FAILED' || status === 'CANCELLED') return 'failed';
+        return 'building';
+    };
+
     const fetchData = useCallback(async () => {
         try {
-            const res = await fetch(`/api/v1/apps/${service.id}/build`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const buildsData = await res.json();
-                // Map the builds into the UI's existing 'Deployment' shape for seamless rendering
+            const [buildRes, deploymentRes] = await Promise.all([
+                fetch(`/api/v1/apps/${service.id}/build`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                }),
+                fetch(`/api/v1/apps/${service.id}/deployments`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+            ]);
+
+            if (buildRes.ok) {
+                const buildsData = await buildRes.json();
                 const mappedBuilds = buildsData.map((b: any) => ({
                     id: b.id,
                     project_id: b.applicationId,
-                    service_id: b.applicationId, // Service maps to Application in backend
+                    service_id: b.applicationId,
                     applicationId: b.applicationId,
                     imageTag: b.imageTag,
-                    status: b.status === "RUNNING" || b.status === "PENDING" ? "building"
-                        : b.status === "SUCCESS" ? "success"
-                            : b.status === "FAILED" ? "failed"
-                                : b.status === "CANCELLED" ? "failed"
-                                    : "building",
+                    status: mapBuildStatusToUi(b.status),
                     created_at: b.startTime || new Date().toISOString(),
                     createdAt: b.startTime || new Date().toISOString(),
                     logs: '',
                     commit_hash: ''
                 }));
-                // Sort by newest first
+
                 mappedBuilds.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
                 setDeployments(mappedBuilds);
 
-                // Keep current deployment selected, or default to the most recent one
                 if (mappedBuilds.length > 0) {
                     setCurrentDeployment(prev => {
                         if (!prev) return mappedBuilds[0];
-                        // Refresh status of the currently selected build
                         const updated = mappedBuilds.find((b: any) => b.id === prev.id);
-                        return updated || prev;
+                        return updated || mappedBuilds[0];
                     });
+                }
+            }
+
+            if (deploymentRes.ok) {
+                const deploymentData = await deploymentRes.json();
+                const latest = deploymentData?.[0];
+                if (latest) {
+                    setRuntimeStatus(mapDeploymentStatusToUi(latest.status));
+                    setLiveUrl(latest.liveUrl || null);
                 }
             }
         } catch (e) { console.error(e); }
@@ -445,10 +478,12 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.ok) {
-                addToast(`Application ${action}ped successfully`, 'success');
+                const message = action === 'restart' ? 'Restart requested' : `Application ${action}ed`;
+                addToast(`${message} successfully`, 'success');
                 setTimeout(() => fetchData(), 1500);
             } else {
-                addToast(`Failed to ${action} application`, 'error');
+                const errorText = await res.text();
+                addToast(`Failed to ${action} application${errorText ? `: ${errorText}` : ''}`, 'error');
             }
         } catch (e) {
             addToast(`Failed to ${action} application`, 'error');
@@ -493,8 +528,8 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                 <div className="flex items-center gap-4">
                     <div className="flex flex-col">
                         <span className="text-[10px] uppercase tracking-wider text-[#666] font-semibold mb-0.5">Status</span>
-                        <Badge variant={String(currentDeployment?.status) === 'live' ? 'live' : 'secondary'} className="text-xs px-2 py-1 uppercase tracking-wider">
-                            {currentDeployment?.status || "NO DEPLOYMENTS"}
+                        <Badge variant={runtimeStatus === 'live' ? 'live' : 'secondary'} className="text-xs px-2 py-1 uppercase tracking-wider">
+                            {runtimeStatus || currentDeployment?.status || "NO DEPLOYMENTS"}
                         </Badge>
                     </div>
                     <div className="h-6 w-[1px] bg-[#222]" />
@@ -507,17 +542,15 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                     <div className="h-6 w-[1px] bg-[#222]" />
                     <div className="flex flex-col">
                         <span className="text-[10px] uppercase tracking-wider text-[#666] font-semibold mb-0.5">Live URL</span>
-                        {currentDeployment?.status === 'live' ? (
-                            <div onClick={() => window.open(`http://ork-${currentDeployment.id}.localhost:8080`, '_blank')} className="flex items-center gap-1.5 cursor-pointer group hover:text-emerald-400 transition-colors">
-                                <span className="text-xs text-[#E3E3E3] font-mono group-hover:text-emerald-400 underline decoration-white/20 underline-offset-2">
-                                    {`http://ork-${currentDeployment.id.substring(0, 8)}....localhost:8080`}
+                        {liveUrl ? (
+                            <div onClick={() => window.open(liveUrl, '_blank')} className="flex items-center gap-1.5 cursor-pointer group hover:text-emerald-400 transition-colors">
+                                <span className="text-xs text-[#E3E3E3] font-mono group-hover:text-emerald-400 underline decoration-white/20 underline-offset-2 truncate max-w-[260px]">
+                                    {liveUrl}
                                 </span>
                                 <ArrowUpRight className="w-3 h-3 text-[#666] group-hover:text-emerald-400" />
                             </div>
                         ) : (
-                            <span className="text-xs text-[#666] font-mono italic flex items-center gap-1">
-                                Generating Live URL...
-                            </span>
+                            <span className="text-xs text-[#666] font-mono italic flex items-center gap-1">Not available yet</span>
                         )}
                     </div>
                 </div>
@@ -528,17 +561,18 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                         variant="secondary"
                         disabled={currentDeployment?.status === 'building'}
                         onClick={handleRedeploy}
+                        title="Build new image and deploy it"
                         className="bg-[#222] border-[#333] hover:bg-[#333] text-[#CCC]"
                     >
                         {currentDeployment?.status === 'building' ? <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-2" />}
-                        Redeploy
+                        Build & Deploy
                     </Button>
                     <Button
                         size="sm"
                         variant="secondary"
                         onClick={() => handleLifecycleAction('stop')}
-                        disabled={!!lifecycleLoading}
-                        title="Stop application"
+                        disabled={!!lifecycleLoading || runtimeStatus === 'stopped'}
+                        title="Stop running pods (keeps current image)"
                         className="bg-[#222] border-[#333] hover:bg-red-900/40 hover:border-red-700 text-[#CCC] hover:text-red-400 transition-colors"
                     >
                         {lifecycleLoading === 'stop' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Square className="w-3.5 h-3.5" />}
@@ -547,8 +581,8 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                         size="sm"
                         variant="secondary"
                         onClick={() => handleLifecycleAction('start')}
-                        disabled={!!lifecycleLoading}
-                        title="Start application"
+                        disabled={!!lifecycleLoading || runtimeStatus === 'live'}
+                        title="Start pods from current deployed image"
                         className="bg-[#222] border-[#333] hover:bg-emerald-900/40 hover:border-emerald-700 text-[#CCC] hover:text-emerald-400 transition-colors"
                     >
                         {lifecycleLoading === 'start' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
@@ -557,8 +591,8 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                         size="sm"
                         variant="secondary"
                         onClick={() => handleLifecycleAction('restart')}
-                        disabled={!!lifecycleLoading}
-                        title="Restart application"
+                        disabled={!!lifecycleLoading || runtimeStatus === 'stopped'}
+                        title="Restart pods without creating a new build"
                         className="bg-[#222] border-[#333] hover:bg-amber-900/40 hover:border-amber-700 text-[#CCC] hover:text-amber-400 transition-colors"
                     >
                         {lifecycleLoading === 'restart' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
@@ -856,13 +890,14 @@ export default function Dashboard() {
             if (res.ok) {
                 const data: any[] = await res.json();
 
-                // Map backend ApplicationResponse to frontend Service interface
                 const mappedServices: Service[] = data.map(app => ({
                     id: app.id,
                     project_id: app.projectId,
                     name: app.name,
-                    status: 'live', // Default until webhook status is implemented
-                    type: 'backend', // Default display type
+                    status: mapDeploymentStatusToUi(app.deploymentStatus),
+                    deployment_status: app.deploymentStatus || undefined,
+                    live_url: app.liveUrl || undefined,
+                    type: 'backend',
                     metrics: { cpu: 12, memory: 512 },
                     domains: [],
                     deployments: [],
@@ -883,7 +918,7 @@ export default function Dashboard() {
                 }
             }
         } catch (e) { console.error(e); }
-    }, [token, viewState]);
+    }, [token, viewState, handleAuthError]);
 
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect

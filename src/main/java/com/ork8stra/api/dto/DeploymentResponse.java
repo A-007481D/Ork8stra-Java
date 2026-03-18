@@ -19,6 +19,7 @@ public class DeploymentResponse {
     private String imageTag;
     private int replicas;
     private String status;
+    private String liveUrl;
     private Instant deployedAt;
 
     public static DeploymentResponse from(Deployment deployment) {
@@ -28,6 +29,7 @@ public class DeploymentResponse {
                 .imageTag(deployment.getVersion())
                 .replicas(deployment.getReplicas())
                 .status(deployment.getStatus().name())
+                .liveUrl(deployment.getIngressUrl())
                 .deployedAt(deployment.getDeployedAt())
                 .build();
     }

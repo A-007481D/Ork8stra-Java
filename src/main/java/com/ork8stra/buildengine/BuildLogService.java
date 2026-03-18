@@ -62,11 +62,44 @@ public class BuildLogService {
                 String podName = pods.get(0).getMetadata().getName();
                 String namespace = pods.get(0).getMetadata().getNamespace();
 
+                // Wait for the 'kaniko' container to be ready or terminated
+                for (int attempt = 0; attempt < 60; attempt++) {
+                    Pod currentPod = kubernetesClient.pods().inNamespace(namespace).withName(podName).get();
+                    if (currentPod == null) break;
+
+                    var containerStatus = currentPod.getStatus().getContainerStatuses().stream()
+                            .filter(cs -> cs.getName().equals("kaniko"))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (containerStatus != null && (containerStatus.getState().getRunning() != null || containerStatus.getState().getTerminated() != null)) {
+                        break;
+                    }
+
+                    // Also check if an init container failed
+                    var initStatus = currentPod.getStatus().getInitContainerStatuses().stream()
+                            .filter(cs -> cs.getState().getTerminated() != null && cs.getState().getTerminated().getExitCode() != 0)
+                            .findFirst()
+                            .orElse(null);
+
+                    if (initStatus != null) {
+                        emitter.send(SseEmitter.event().name("log").data("Init container '" + initStatus.getName() + "' failed with exit code " + initStatus.getState().getTerminated().getExitCode()));
+                        emitter.send(SseEmitter.event().name("error").data("Initialization failed"));
+                        emitter.complete();
+                        return;
+                    }
+
+                    log.debug("Waiting for kaniko container to start (attempt {}/60)", attempt + 1);
+                    emitter.send(SseEmitter.event().name("log").data("Waiting for build container to start..."));
+                    Thread.sleep(2000);
+                }
+
                 log.info("Streaming logs for pod '{}' in namespace '{}'", podName, namespace);
 
                 try (LogWatch logWatch = kubernetesClient.pods()
                         .inNamespace(namespace)
                         .withName(podName)
+                        .inContainer("kaniko")
                         .tailingLines(100)
                         .watchLog()) {
 

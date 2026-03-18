@@ -4,6 +4,9 @@ import com.ork8stra.applicationmanagement.Application;
 import com.ork8stra.applicationmanagement.ApplicationService;
 import com.ork8stra.projectmanagement.Project;
 import com.ork8stra.projectmanagement.ProjectService;
+import com.ork8stra.deploymentengine.Deployment;
+import com.ork8stra.deploymentengine.DeploymentRepository;
+import com.ork8stra.deploymentengine.DeploymentStatus;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ public class RollbackService {
     private final ApplicationService applicationService;
     private final ProjectService projectService;
     private final KubernetesClient kubernetesClient;
+    private final DeploymentRepository deploymentRepository;
 
     public Build rollbackToVersion(UUID applicationId, UUID targetBuildId) {
         Build targetBuild = buildRepository.findById(targetBuildId)
@@ -38,7 +42,7 @@ public class RollbackService {
         Project project = projectService.getProjectById(app.getProjectId());
         String imageTag = targetBuild.getImageTag();
         String namespace = project.getK8sNamespace();
-        String deploymentName = app.getName() + "-deploy";
+        String deploymentName = resolveDeploymentName(app.getName(), namespace);
 
         log.info("Rolling back app '{}' to image '{}'", app.getName(), imageTag);
 
@@ -57,7 +61,26 @@ public class RollbackService {
                         .endSpec()
                         .build());
 
+        Deployment rollbackDeployment = new Deployment(applicationId, imageTag);
+        deploymentRepository.findFirstByApplicationIdOrderByDeployedAtDesc(applicationId)
+                .ifPresent(previous -> rollbackDeployment.setIngressUrl(previous.getIngressUrl()));
+        rollbackDeployment.setStatus(DeploymentStatus.HEALTHY);
+        deploymentRepository.save(rollbackDeployment);
+
         log.info("Rollback complete for app '{}' to build '{}'", app.getName(), targetBuildId);
         return targetBuild;
+    }
+
+    private String resolveDeploymentName(String appName, String namespace) {
+        String sanitized = appName.toLowerCase().replaceAll("[^a-z0-9-]", "-")
+                .replaceAll("-+", "-")
+                .replaceAll("^-|-$", "");
+        String preferred = (sanitized.isBlank() ? "app" : sanitized) + "-deploy";
+
+        if (kubernetesClient.apps().deployments().inNamespace(namespace).withName(preferred).get() != null) {
+            return preferred;
+        }
+
+        return appName + "-deploy";
     }
 }

@@ -19,7 +19,7 @@ public class DeploymentController {
 
     @GetMapping
     public ResponseEntity<List<DeploymentResponse>> listDeployments(@PathVariable UUID appId) {
-        List<Deployment> deployments = deploymentRepository.findByApplicationId(appId);
+        List<Deployment> deployments = deploymentRepository.findByApplicationIdOrderByDeployedAtDesc(appId);
         return ResponseEntity.ok(deployments.stream().map(DeploymentResponse::from).toList());
     }
 

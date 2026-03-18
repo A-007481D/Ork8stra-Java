@@ -46,10 +46,10 @@ public class RabbitMQEventPublisher implements EventPublisher {
     }
 
     @Override
-    public void publishDeploymentStatus(String deploymentId, String applicationId, String status) {
-        record DeploymentStatusEvent(String deploymentId, String applicationId, String status) {
+    public void publishDeploymentStatus(String deploymentId, String applicationId, String status, String url) {
+        record DeploymentStatusEvent(String deploymentId, String applicationId, String status, String url) {
         }
         publishEvent(RabbitMQConfig.EXCHANGE_DEPLOYMENTS, RabbitMQConfig.ROUTING_KEY_DEPLOY_STATUS,
-                new DeploymentStatusEvent(deploymentId, applicationId, status));
+                new DeploymentStatusEvent(deploymentId, applicationId, status, url));
     }
 }

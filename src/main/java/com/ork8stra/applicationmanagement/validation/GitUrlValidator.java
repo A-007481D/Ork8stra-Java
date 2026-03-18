@@ -21,7 +21,7 @@ public class GitUrlValidator {
 
     public GitUrlValidator() {
         this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(5))
+                .connectTimeout(Duration.ofSeconds(20))
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
     }
@@ -50,7 +50,8 @@ public class GitUrlValidator {
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(checkUrl))
-                    .timeout(Duration.ofSeconds(5))
+                    .timeout(Duration.ofSeconds(20))
+                    .header("User-Agent", "Ork8stra-Bot/1.0")
                     .method("HEAD", HttpRequest.BodyPublishers.noBody())
                     .build();
 

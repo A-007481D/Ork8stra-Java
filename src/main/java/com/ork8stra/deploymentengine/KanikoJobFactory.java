@@ -19,24 +19,32 @@ public class KanikoJobFactory {
         String gitUrl = application.getGitRepoUrl();
         String branch = application.getBuildBranch() != null ? application.getBuildBranch() : "main";
 
-        // Kaniko git context format: git://github.com/owner/repo#refs/heads/branch
-        // Strip https:// prefix, kaniko adds it internally for git:// scheme
-        String gitContext = "git://" + gitUrl.replace("https://", "") + "#refs/heads/" + branch;
+        // Handle GitHub URLs with /tree/branch/subpath
+        String contextSubPath = application.getDockerfilePath() != null && application.getDockerfilePath().contains("/")
+                ? application.getDockerfilePath().substring(0, application.getDockerfilePath().lastIndexOf('/'))
+                : null;
 
-        // Resolve dockerfile path — default to "Dockerfile" if not set
-        String dockerfilePath = application.getDockerfilePath() != null && !application.getDockerfilePath().isBlank()
-                ? application.getDockerfilePath()
-                : "Dockerfile";
-
-        // If Dockerfile is in a subdirectory (e.g. "app/Dockerfile"), set --context-sub-path
-        // so that COPY commands in the Dockerfile resolve relative to that subdirectory
-        String contextSubPath = null;
-        if (dockerfilePath.contains("/")) {
-            contextSubPath = dockerfilePath.substring(0, dockerfilePath.lastIndexOf('/'));
+        if (gitUrl.contains("/tree/")) {
+            String[] parts = gitUrl.split("/tree/");
+            gitUrl = parts[0]; // The repo root URL
+            String branchAndPath = parts[1];
+            if (branchAndPath.contains("/")) {
+                branch = branchAndPath.substring(0, branchAndPath.indexOf("/"));
+                String subPath = branchAndPath.substring(branchAndPath.indexOf("/") + 1);
+                contextSubPath = contextSubPath == null ? subPath : subPath + "/" + contextSubPath;
+            } else {
+                branch = branchAndPath;
+            }
         }
 
+        // Local context for Kaniko after init container clones it
+        String localContext = "/workspace";
+        String dockerfilePath = (application.getDockerfilePath() != null && !application.getDockerfilePath().isBlank()
+                ? application.getDockerfilePath()
+                : "Dockerfile");
+
         List<String> args = new ArrayList<>();
-        args.add("--context=" + gitContext);
+        args.add("--context=dir://" + localContext);
         args.add("--dockerfile=" + dockerfilePath);
         if (contextSubPath != null) {
             args.add("--context-sub-path=" + contextSubPath);
@@ -45,6 +53,13 @@ public class KanikoJobFactory {
         args.add("--cache=true");
         args.add("--cache-ttl=24h");
         args.add("--log-format=text");
+        args.add("--snapshot-mode=full");
+
+        String gitCloneCommand = String.format("git clone -b %s %s .", branch, gitUrl);
+        if (gitUrl.contains("/tree/")) {
+             // If it was a tree URL, we already extracted root and branch, so we just clone the root
+             gitCloneCommand = String.format("git clone -b %s %s .", branch, gitUrl);
+        }
 
         return new JobBuilder()
                 .withNewMetadata()
@@ -63,11 +78,31 @@ public class KanikoJobFactory {
                 .endMetadata()
                 .withNewSpec()
                 .withRestartPolicy("Never")
+                .addNewInitContainer()
+                    .withName("git-clone")
+                    .withImage("alpine/git")
+                    .withCommand("sh", "-c", gitCloneCommand)
+                    .withWorkingDir("/workspace")
+                    .addNewVolumeMount()
+                        .withName("workspace")
+                        .withMountPath("/workspace")
+                    .endVolumeMount()
+                .endInitContainer()
                 .addNewContainer()
-                .withName("kaniko")
-                .withImage("gcr.io/kaniko-project/executor:latest")
-                .withArgs(args)
+                    .withName("kaniko")
+                    .withImage("gcr.io/kaniko-project/executor:latest")
+                    .withArgs(args)
+                    .withWorkingDir("/workspace")
+                    .addNewVolumeMount()
+                        .withName("workspace")
+                        .withMountPath("/workspace")
+                    .endVolumeMount()
                 .endContainer()
+                .addNewVolume()
+                    .withName("workspace")
+                    .withNewEmptyDir()
+                    .endEmptyDir()
+                .endVolume()
                 .endSpec()
                 .endTemplate()
                 .endSpec()

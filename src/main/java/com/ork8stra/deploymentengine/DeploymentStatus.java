@@ -4,5 +4,7 @@ public enum DeploymentStatus {
     IN_PROGRESS,
     HEALTHY,
     UNHEALTHY,
-    FAILED
+    FAILED,
+    STOPPED,
+    RESTARTING
 }

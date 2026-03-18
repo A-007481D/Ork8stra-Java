@@ -25,6 +25,10 @@ public class KanikoJobWatcher {
     @PostConstruct
     public void startWatching() {
         log.info("Starting Kaniko Job Watcher for ork8stra builds");
+
+        // Reconcile any builds that completed while the backend was down
+        reconcileOnStartup();
+
         watch = kubernetesClient.batch().v1().jobs()
                 .inAnyNamespace()
                 .withLabel("managed-by", "ork8stra")
@@ -65,6 +69,49 @@ public class KanikoJobWatcher {
                         }
                     }
                 });
+    }
+
+    private void reconcileOnStartup() {
+        log.info("Reconciling missed build events...");
+        try {
+            var jobs = kubernetesClient.batch().v1().jobs()
+                    .inAnyNamespace()
+                    .withLabel("managed-by", "ork8stra")
+                    .withLabel("job-type", "build")
+                    .list()
+                    .getItems();
+
+            for (Job job : jobs) {
+                var status = job.getStatus();
+                if (status == null) continue;
+
+                String buildIdStr = job.getMetadata().getAnnotations() != null
+                        ? job.getMetadata().getAnnotations().get("ork8stra.com/build-id")
+                        : null;
+                if (buildIdStr == null) continue;
+
+                UUID buildId = UUID.fromString(buildIdStr);
+
+                try {
+                    Build build = buildService.getBuild(buildId);
+                    if (build.getStatus() != BuildStatus.RUNNING) continue;
+
+                    if (status.getSucceeded() != null && status.getSucceeded() > 0) {
+                        log.info("Reconciling: Build '{}' completed while offline", buildIdStr);
+                        String imageTag = extractImageTag(job);
+                        buildService.updateBuildStatus(buildId, BuildStatus.SUCCESS, imageTag);
+                    } else if (status.getFailed() != null && status.getFailed() > 0) {
+                        log.info("Reconciling: Build '{}' failed while offline", buildIdStr);
+                        buildService.updateBuildStatus(buildId, BuildStatus.FAILED, null);
+                    }
+                } catch (Exception e) {
+                    log.warn("Skipping reconciliation for build '{}': {}", buildIdStr, e.getMessage());
+                }
+            }
+            log.info("Build reconciliation complete.");
+        } catch (Exception e) {
+            log.error("Failed to reconcile builds on startup", e);
+        }
     }
 
     @PreDestroy
