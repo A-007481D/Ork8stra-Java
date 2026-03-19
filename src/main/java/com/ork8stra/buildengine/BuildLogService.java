@@ -89,8 +89,11 @@ public class BuildLogService {
                         return;
                     }
 
-                    log.debug("Waiting for kaniko container to start (attempt {}/60)", attempt + 1);
-                    emitter.send(SseEmitter.event().name("log").data("Waiting for build container to start..."));
+                    log.debug("Waiting for kaniko container to start (attempt {}/150)", attempt + 1);
+                    if (attempt == 0 || attempt % 15 == 0) {
+                        emitter.send(SseEmitter.event().name("log").data(
+                            attempt == 0 ? "Initializing build environment..." : "Auto-detecting project environment (Nixpacks can take up to 2 minutes)..."));
+                    }
                     Thread.sleep(2000);
                 }
 
