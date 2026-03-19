@@ -62,8 +62,8 @@ public class BuildLogService {
                 String podName = pods.get(0).getMetadata().getName();
                 String namespace = pods.get(0).getMetadata().getNamespace();
 
-                // Wait for the 'kaniko' container to be ready or terminated
-                for (int attempt = 0; attempt < 60; attempt++) {
+                // Wait for the 'kaniko' container to be ready or terminated (can take up to 5 minutes with Nixpacks generation)
+                for (int attempt = 0; attempt < 150; attempt++) {
                     Pod currentPod = kubernetesClient.pods().inNamespace(namespace).withName(podName).get();
                     if (currentPod == null) break;
 
