@@ -138,7 +138,8 @@ public class BuildLogService {
             } catch (Exception e) {
                 log.error("Error streaming build logs for build '{}'", buildId, e);
                 try {
-                    emitter.send(SseEmitter.event().name("error").data("Log streaming error: " + e.getMessage()));
+                    String errorMsg = e.getMessage() != null ? e.getMessage() : "Internal server error while streaming logs";
+                    emitter.send(SseEmitter.event().name("error").data("Log streaming error: " + errorMsg));
                 } catch (Exception ignored) {}
                 emitter.completeWithError(e);
             }

@@ -58,10 +58,8 @@ public class KanikoJobFactory {
             args.add("--context-sub-path=" + contextSubPath);
         }
         args.add("--destination=" + imageDestination);
-        args.add("--cache=true");
-        args.add("--cache-ttl=24h");
-        args.add("--log-format=text");
-        args.add("--snapshot-mode=full");
+        args.add("--insecure");
+        args.add("--skip-tls-verify");
 
         String cloneCommand = buildCloneCommand(gitUrl, branch);
         String nixpacksCommand = buildNixpacksCommand(localContext, contextSubPath);
