@@ -26,6 +26,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -110,8 +112,8 @@ public class DeploymentService {
                 String namespace = project.getK8sNamespace();
                 String resourceName = toKubernetesName(app.getName());
                 String deploymentName = resourceName + "-deploy";
-                int containerPort = resolveContainerPort(app);
-                Map<String, String> envVars = buildRuntimeEnv(app);
+                int containerPort = detectPortFromImage(imageTag, app);
+                Map<String, String> envVars = buildRuntimeEnv(app, containerPort);
 
                 ensureNamespace(project);
 
@@ -203,15 +205,82 @@ public class DeploymentService {
                 return "https://" + host;
         }
 
-        private Map<String, String> buildRuntimeEnv(Application app) {
+        private Map<String, String> buildRuntimeEnv(Application app, int containerPort) {
                 Map<String, String> env = new LinkedHashMap<>();
                 if (app.getEnvVars() != null) {
                         env.putAll(app.getEnvVars());
                 }
 
-                env.putIfAbsent("PORT", String.valueOf(defaultContainerPort));
+                // Always override PORT to match the detected containerPort
+                env.put("PORT", String.valueOf(containerPort));
                 env.putIfAbsent("HOST", "0.0.0.0");
                 return env;
+        }
+
+        /**
+         * Detect the container port from the Docker image's EXPOSE directive.
+         * Uses minikube ssh to query the registry v2 API from inside the VM.
+         * Falls back to user's PORT env var, then to defaultContainerPort.
+         */
+        private int detectPortFromImage(String imageTag, Application app) {
+                try {
+                        // imageTag format: "host:port/repo:tag"
+                        int firstSlash = imageTag.indexOf('/');
+                        if (firstSlash < 0) return resolveContainerPort(app);
+                        
+                        String registryHost = imageTag.substring(0, firstSlash);
+                        String repoAndTag = imageTag.substring(firstSlash + 1);
+                        String[] parts = repoAndTag.split(":");
+                        String repo = parts[0];
+                        String tag = parts.length > 1 ? parts[1] : "latest";
+
+                        // Use minikube ssh to curl the registry from inside the VM
+                        // Step 1: Get the manifest to find config digest
+                        String manifestCmd = String.format(
+                                "curl -s -H 'Accept: application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json' http://%s/v2/%s/manifests/%s",
+                                registryHost, repo, tag);
+                        
+                        ProcessBuilder pb1 = new ProcessBuilder("minikube", "ssh", "--", manifestCmd);
+                        pb1.redirectErrorStream(true);
+                        Process p1 = pb1.start();
+                        String manifestJson = new String(p1.getInputStream().readAllBytes());
+                        p1.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+                        
+                        var objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                        var manifest = objectMapper.readTree(manifestJson);
+                        String configDigest = manifest.path("config").path("digest").asText();
+                        
+                        if (configDigest.isEmpty()) {
+                                log.warn("No config digest in manifest for {}", imageTag);
+                                return resolveContainerPort(app);
+                        }
+
+                        // Step 2: Get the config blob to find ExposedPorts
+                        String configCmd = String.format(
+                                "curl -s http://%s/v2/%s/blobs/%s",
+                                registryHost, repo, configDigest);
+                        
+                        ProcessBuilder pb2 = new ProcessBuilder("minikube", "ssh", "--", configCmd);
+                        pb2.redirectErrorStream(true);
+                        Process p2 = pb2.start();
+                        String configJson = new String(p2.getInputStream().readAllBytes());
+                        p2.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+                        
+                        var config = objectMapper.readTree(configJson);
+                        var exposedPorts = config.path("config").path("ExposedPorts");
+                        if (!exposedPorts.isMissingNode() && exposedPorts.fieldNames().hasNext()) {
+                                String portSpec = exposedPorts.fieldNames().next(); // e.g. "8080/tcp"
+                                String portNum = portSpec.split("/")[0];
+                                int detectedPort = Integer.parseInt(portNum);
+                                log.info("Detected EXPOSE port {} from image {}", detectedPort, imageTag);
+                                return detectedPort;
+                        }
+
+                        log.info("No EXPOSE port found in image {}, falling back to resolveContainerPort", imageTag);
+                } catch (Exception e) {
+                        log.warn("Failed to detect port from image {}: {}", imageTag, e.getMessage());
+                }
+                return resolveContainerPort(app);
         }
 
         private int resolveContainerPort(Application app) {
@@ -227,6 +296,7 @@ public class DeploymentService {
                         return defaultContainerPort;
                 }
         }
+
 
         private void ensureNamespace(Project project) {
                 String namespace = project.getK8sNamespace();
