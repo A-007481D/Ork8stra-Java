@@ -83,7 +83,7 @@ public class KanikoJobFactory {
         if (autoDetectDockerfile) {
             Container nixpacksInit = new ContainerBuilder()
                     .withName("dockerfile-auto-detect")
-                    .withImage("ghcr.io/railwayapp/nixpacks:ubuntu")
+                    .withImage("ubuntu:22.04")
                     .withCommand("sh", "-c", nixpacksCommand)
                     .withWorkingDir("/workspace")
                     .withVolumeMounts(new VolumeMountBuilder()
@@ -166,9 +166,11 @@ public class KanikoJobFactory {
                 + "if [ ! -d \"$TARGET_DIR\" ]; then echo \"Invalid build context: $TARGET_DIR\"; exit 1; fi\n"
                 + "if [ -f \"$TARGET_DIR/Dockerfile\" ]; then cp \"$TARGET_DIR/Dockerfile\" \"$AUTO_DOCKERFILE\"; fi\n"
                 + "if [ ! -f \"$AUTO_DOCKERFILE\" ]; then\n"
-                + "  echo \"Generating optimized Dockerfile using Nixpacks...\"\n"
+                + "  echo \"Trying to generate Dockerfile using Nixpacks...\"\n"
+                + "  apt-get update && apt-get install -y curl ca-certificates\n"
+                + "  curl -sSL https://nixpacks.com/install.sh | bash\n"
                 + "  # Nixpacks build --out generates the .nixpacks/Dockerfile without building an image\n"
-                + "  nixpacks build \"$TARGET_DIR\" --out \"$TARGET_DIR\" --name app\n"
+                + "  /usr/local/bin/nixpacks build \"$TARGET_DIR\" --out \"$TARGET_DIR\" --name app\n"
                 + "  \n"
                 + "  # Nixpacks build --out creates a .nixpacks directory with the Dockerfile inside\n"
                 + "  if [ -f \"$TARGET_DIR/.nixpacks/Dockerfile\" ]; then\n"
