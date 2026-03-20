@@ -2,6 +2,8 @@ package com.ork8stra.deploymentengine;
 
 import com.ork8stra.applicationmanagement.Application;
 import com.ork8stra.applicationmanagement.ApplicationService;
+import com.ork8stra.applicationmanagement.ServiceConnection;
+import com.ork8stra.applicationmanagement.ServiceConnectionService;
 import com.ork8stra.buildengine.BuildCompletedEvent;
 import com.ork8stra.projectmanagement.Project;
 import com.ork8stra.projectmanagement.ProjectService;
@@ -42,6 +44,7 @@ public class DeploymentService {
         private final KubernetesClient kubernetesClient;
         private final ApplicationService applicationService;
         private final ProjectService projectService;
+        private final ServiceConnectionService connectionService;
 
         @Value("${kubelite.base-domain}")
         private String baseDomain;
@@ -185,51 +188,80 @@ public class DeploymentService {
 
                 String host = buildIngressHost(project, app);
 
-                kubernetesClient.network().v1().ingresses().inNamespace(namespace).resource(
-                                new IngressBuilder()
-                                                .withNewMetadata()
-                                                .withName(resourceName + "-ingress")
-                                                .addToLabels("app", resourceName)
-                                                .addToAnnotations("cert-manager.io/cluster-issuer", "kubelite-selfsigned")
-                                                .addToAnnotations("nginx.ingress.kubernetes.io/ssl-redirect", "true")
-                                                .endMetadata()
-                                                .withNewSpec()
-                                                .withTls(new IngressTLSBuilder()
-                                                                .addToHosts(host)
-                                                                .withSecretName(resourceName + "-tls-secret")
-                                                                .build())
-                                                .addNewRule()
-                                                .withHost(host)
-                                                .withNewHttp()
-                                                .addNewPath()
-                                                .withPath("/")
-                                                .withPathType("Prefix")
-                                                .withNewBackend()
-                                                .withNewService()
-                                                .withName(resourceName + "-svc")
-                                                .withNewPort()
-                                                .withNumber(80)
-                                                .endPort()
-                                                .endService()
-                                                .endBackend()
-                                                .endPath()
-                                                .addNewPath()
-                                                .withPath("/api")
-                                                .withPathType("Prefix")
-                                                .withNewBackend()
-                                                .withNewService()
-                                                .withName(resourceName + "-svc")
-                                                .withNewPort()
-                                                .withNumber(3001)
-                                                .endPort()
-                                                .endService()
-                                                .endBackend()
-                                                .endPath()
-                                                .endHttp()
-                                                .endRule()
-                                                .endSpec()
+                IngressBuilder ingressBuilder = new IngressBuilder()
+                                .withNewMetadata()
+                                .withName(resourceName + "-ingress")
+                                .addToLabels("app", resourceName)
+                                .addToAnnotations("cert-manager.io/cluster-issuer", "kubelite-selfsigned")
+                                .addToAnnotations("nginx.ingress.kubernetes.io/ssl-redirect", "true")
+                                .addToAnnotations("nginx.ingress.kubernetes.io/rewrite-target", "/$2")
+                                .endMetadata()
+                                .withNewSpec()
+                                .withTls(new IngressTLSBuilder()
+                                                .addToHosts(host)
+                                                .withSecretName(resourceName + "-tls-secret")
                                                 .build())
-                                .createOrReplace();
+                                .addNewRule()
+                                .withHost(host)
+                                .withNewHttp()
+                                .addNewPath()
+                                .withPath("/()(.*)")
+                                .withPathType("ImplementationSpecific")
+                                .withNewBackend()
+                                .withNewService()
+                                .withName(resourceName + "-svc")
+                                .withNewPort()
+                                .withNumber(80)
+                                .endPort()
+                                .endService()
+                                .endBackend()
+                                .endPath()
+                                .addNewPath()
+                                .withPath("/api(/|$)(.*)")
+                                .withPathType("ImplementationSpecific")
+                                .withNewBackend()
+                                .withNewService()
+                                .withName(resourceName + "-svc")
+                                .withNewPort()
+                                .withNumber(3001)
+                                .endPort()
+                                .endService()
+                                .endBackend()
+                                .endPath()
+                                .endHttp()
+                                .endRule()
+                                .endSpec();
+
+                // Magic Proxying based on ReactFlow Connections
+                List<ServiceConnection> connections = connectionService.getOutgoingConnections(app.getId());
+                for (ServiceConnection conn : connections) {
+                        try {
+                                Application target = applicationService.getApplication(conn.getTargetAppId());
+                                String targetName = toKubernetesName(target.getName());
+                                ingressBuilder.editSpec()
+                                        .editFirstRule()
+                                        .editHttp()
+                                        .addNewPath()
+                                                .withPath("/" + targetName + "(/|$)(.*)")
+                                                .withPathType("ImplementationSpecific")
+                                                .withNewBackend()
+                                                        .withNewService()
+                                                                .withName(targetName + "-svc")
+                                                                .withNewPort()
+                                                                        .withNumber(80)
+                                                                .endPort()
+                                                        .endService()
+                                                .endBackend()
+                                        .endPath()
+                                        .endHttp()
+                                        .endRule()
+                                        .endSpec();
+                        } catch (Exception e) {
+                                log.warn("Failed to add magic connection path for target {}: {}", conn.getTargetAppId(), e.getMessage());
+                        }
+                }
+
+                kubernetesClient.network().v1().ingresses().inNamespace(namespace).resource(ingressBuilder.build()).createOrReplace();
 
                 return "https://" + host;
         }
@@ -247,6 +279,18 @@ public class DeploymentService {
                         
                         String sanitizedName = toKubernetesName(other.getName()).toUpperCase().replace("-", "_");
                         env.put("SERVICE_" + sanitizedName + "_URL", "http://" + toKubernetesName(other.getName()) + "-svc");
+                }
+
+                // Explicit ReactFlow Connections (Highest priority, can override or add specific links)
+                List<ServiceConnection> connections = connectionService.getOutgoingConnections(app.getId());
+                for (ServiceConnection conn : connections) {
+                        Application target = applicationService.getApplication(conn.getTargetAppId());
+                        String targetName = toKubernetesName(target.getName());
+                        String envPrefix = "CONNECTION_" + targetName.toUpperCase().replace("-", "_");
+                        
+                        env.put(envPrefix + "_URL", "http://" + targetName + "-svc");
+                        env.put(envPrefix + "_HOST", targetName + "-svc");
+                        env.put(envPrefix + "_PORT", "80");
                 }
 
                 // Always override PORT to match the detected containerPort
