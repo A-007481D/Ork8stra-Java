@@ -184,7 +184,6 @@ public class KanikoJobFactory {
                 + "TARGET_DIR=\"" + escapeForDoubleQuotes(targetDir) + "\"\n"
                 + "AUTO_DOCKERFILE=\"" + escapeForDoubleQuotes(autoDockerfilePath) + "\"\n"
                 + "if [ ! -d \"$TARGET_DIR\" ]; then echo \"Invalid build context: $TARGET_DIR\"; exit 1; fi\n"
-                + "if [ -f \"$TARGET_DIR/Dockerfile\" ]; then cp \"$TARGET_DIR/Dockerfile\" \"$AUTO_DOCKERFILE\"; fi\n"
                 + "if [ ! -f \"$AUTO_DOCKERFILE\" ]; then\n"
                 + "  echo \"Trying to generate Dockerfile using Nixpacks...\"\n"
                 + "  apt-get update && apt-get install -y curl ca-certificates\n"
