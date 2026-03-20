@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -131,6 +132,7 @@ public class DeploymentService {
                                                 .withNewTemplate()
                                                 .withNewMetadata()
                                                 .addToLabels("app", resourceName)
+                                                .addToAnnotations("ork8stra.com/restartedAt", Instant.now().toString())
                                                 .endMetadata()
                                                 .withNewSpec()
                                                 .addNewContainer()
