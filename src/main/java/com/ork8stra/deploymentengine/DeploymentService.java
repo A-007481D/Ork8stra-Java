@@ -8,6 +8,7 @@ import com.ork8stra.projectmanagement.ProjectService;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.NamespaceBuilder;
+import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
@@ -24,11 +25,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -114,7 +117,7 @@ public class DeploymentService {
                 String resourceName = toKubernetesName(app.getName());
                 String deploymentName = resourceName + "-deploy";
                 int containerPort = detectPortFromImage(imageTag, app);
-                Map<String, String> envVars = buildRuntimeEnv(app, containerPort);
+                Map<String, String> envVars = buildRuntimeEnv(app, project, containerPort);
 
                 ensureNamespace(project);
 
@@ -138,6 +141,12 @@ public class DeploymentService {
                                                 .addNewContainer()
                                                 .withName(resourceName)
                                                 .withImage(imageTag)
+                                                .withNewResources()
+                                                        .addToRequests("cpu", new Quantity("100m"))
+                                                        .addToRequests("memory", new Quantity("256Mi"))
+                                                        .addToLimits("cpu", new Quantity("500m"))
+                                                        .addToLimits("memory", new Quantity("512Mi"))
+                                                .endResources()
                                                 .addNewPort()
                                                 .withContainerPort(containerPort)
                                                 .endPort()
@@ -207,10 +216,19 @@ public class DeploymentService {
                 return "https://" + host;
         }
 
-        private Map<String, String> buildRuntimeEnv(Application app, int containerPort) {
+        private Map<String, String> buildRuntimeEnv(Application app, Project project, int containerPort) {
                 Map<String, String> env = new LinkedHashMap<>();
                 if (app.getEnvVars() != null) {
                         env.putAll(app.getEnvVars());
+                }
+
+                // Automatic Service Discovery for other apps in the same project
+                List<Application> otherApps = applicationService.getApplicationsByProject(project.getId());
+                for (Application other : otherApps) {
+                        if (other.getId().equals(app.getId())) continue;
+                        
+                        String sanitizedName = toKubernetesName(other.getName()).toUpperCase().replace("-", "_");
+                        env.put("SERVICE_" + sanitizedName + "_URL", "http://" + toKubernetesName(other.getName()) + "-svc");
                 }
 
                 // Always override PORT to match the detected containerPort
