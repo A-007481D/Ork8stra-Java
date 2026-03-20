@@ -202,7 +202,7 @@ public class KanikoJobFactory {
                 + "    mv \"$AUTO_DOCKERFILE.tmp\" \"$AUTO_DOCKERFILE\"\n"
                 + "    echo 'ENV PORT=80' >> \"$AUTO_DOCKERFILE\"\n"
                 + "    echo 'EXPOSE 80' >> \"$AUTO_DOCKERFILE\"\n"
-                + "    echo 'CMD \"set -x; npm run start -- --host 0.0.0.0 --port ${PORT:-80} || npm run dev -- --host 0.0.0.0 --port ${PORT:-80} || node server.js\"' >> \"$AUTO_DOCKERFILE\"\n"
+                + "    echo 'CMD set -x; npm run start -- --host 0.0.0.0 --port ${PORT:-80} || npm run dev -- --host 0.0.0.0 --port ${PORT:-80} || node server.js' >> \"$AUTO_DOCKERFILE\"\n"
                 + "    echo \"Successfully generated Dockerfile via Nixpacks.\"\n"
                 + "  fi\n"
                 + "fi\n"
