@@ -320,6 +320,6 @@ public class DeploymentService {
         }
 
         private String toDnsLabel(String value) {
-                return normalized.isBlank() ? "app" : normalized;
+                return toKubernetesName(value);
         }
 }

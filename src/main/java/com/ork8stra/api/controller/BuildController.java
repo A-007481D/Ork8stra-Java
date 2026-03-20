@@ -77,12 +77,19 @@ public class BuildController {
                 // Try standard Minikube locations
                 var svc = projectService.getKubernetesClient().services().inNamespace("kube-system").withName("local-registry").get();
                 if (svc == null) {
+                    svc = projectService.getKubernetesClient().services().inNamespace("kube-system").withName("registry").get();
+                }
+                if (svc == null) {
                     svc = projectService.getKubernetesClient().services().inNamespace("container-registry").withName("local-registry").get();
                 }
                 
-                if (svc != null) {
-                    normalizedRepo = "local-registry.kube-system:5000"; // Use stable DNS name
-                    log.info("Dynamically discovered local registry: {}", normalizedRepo);
+                if (svc != null && svc.getSpec() != null && svc.getSpec().getClusterIP() != null) {
+                    int port = 5000;
+                    if (svc.getSpec().getPorts() != null && !svc.getSpec().getPorts().isEmpty()) {
+                        port = svc.getSpec().getPorts().get(0).getPort();
+                    }
+                    normalizedRepo = svc.getSpec().getClusterIP() + ":" + port; 
+                    log.info("Dynamically discovered local registry at {} (using port {})", normalizedRepo, port);
                 } else {
                     normalizedRepo = "ttl.sh";
                 }

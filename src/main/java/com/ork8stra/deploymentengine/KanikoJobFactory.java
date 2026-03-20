@@ -15,6 +15,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -63,6 +64,10 @@ public class KanikoJobFactory {
         args.add("--destination=" + imageDestination);
         args.add("--insecure");
         args.add("--skip-tls-verify");
+        args.add("--compressed-caching=false");
+        args.add("--use-new-run");
+        args.add("--cache=true");
+        args.add("--cache-repo=" + imageDestination.split(":")[0] + "/cache");
 
         String cloneCommand = buildCloneCommand(gitUrl, branch);
         String nixpacksCommand = buildNixpacksCommand(localContext, contextSubPath);
@@ -102,13 +107,13 @@ public class KanikoJobFactory {
                 .withWorkingDir("/workspace")
                 .withEnv(new io.fabric8.kubernetes.api.model.EnvVarBuilder()
                         .withName("NIX_CONFIG")
-                        .withValue("connect-timeout = 600\nmax-jobs = 1\nhttp-connections = 50")
+                        .withValue("connect-timeout = 600\nmax-jobs = 2\nhttp-connections = 50")
                         .build())
                 .withResources(new ResourceRequirementsBuilder()
                         .addToRequests("cpu", new Quantity("2"))
                         .addToRequests("memory", new Quantity("4Gi"))
-                        .addToLimits("cpu", new Quantity("2"))
-                        .addToLimits("memory", new Quantity("4Gi"))
+                        .addToLimits("cpu", new Quantity("4"))
+                        .addToLimits("memory", new Quantity("8Gi"))
                         .build())
                 .withNewSecurityContext()
                         .withRunAsUser(0L)
@@ -144,7 +149,7 @@ public class KanikoJobFactory {
                 .withNewSpec()
                 .withRestartPolicy("Never")
                 .withInitContainers(initContainers)
-                .withContainers(kanikoContainer)
+                .withContainers(Collections.singletonList(kanikoContainer))
                 .withVolumes(workspaceVolume)
                 .endSpec()
                 .endTemplate()
@@ -190,6 +195,14 @@ public class KanikoJobFactory {
                 + "  # Nixpacks build --out creates a .nixpacks directory with the Dockerfile inside\n"
                 + "  if [ -f \"$TARGET_DIR/.nixpacks/Dockerfile\" ]; then\n"
                 + "    cp \"$TARGET_DIR/.nixpacks/Dockerfile\" \"$AUTO_DOCKERFILE\"\n"
+                + "    # Post-process: ensure the app listens on PORT (default 80)\n"
+                + "    # Nixpacks start commands (e.g. ng serve) ignore PORT env var\n"
+                + "    # Strip existing CMD and append our own with --port $PORT\n"
+                + "    grep -v '^CMD' \"$AUTO_DOCKERFILE\" > \"$AUTO_DOCKERFILE.tmp\" || true\n"
+                + "    mv \"$AUTO_DOCKERFILE.tmp\" \"$AUTO_DOCKERFILE\"\n"
+                + "    echo 'ENV PORT=80' >> \"$AUTO_DOCKERFILE\"\n"
+                + "    echo 'EXPOSE 80' >> \"$AUTO_DOCKERFILE\"\n"
+                + "    echo 'CMD [\"bash\", \"-lc\", \"exec npm run start -- --host 0.0.0.0 --port ${PORT:-80} 2>/dev/null || exec npm run dev -- --host 0.0.0.0 --port ${PORT:-80} 2>/dev/null || exec node server.js\"]' >> \"$AUTO_DOCKERFILE\"\n"
                 + "    echo \"Successfully generated Dockerfile via Nixpacks.\"\n"
                 + "  fi\n"
                 + "fi\n"
