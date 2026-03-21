@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Project, Service, Deployment, ViewState, Team, Organization } from "./types/index";
 import {
-    Search, Plus, Bell, ChevronDown, ChevronRight,
-    Inbox, Layers,
+    Search, Plus, Bell, ChevronDown, ChevronRight, ChevronLeft, Globe,
+    Layers, LineChart,
     Box, Filter, List as ListIcon,
     Terminal, Activity, ArrowUpRight, Server,
     GitBranch, RefreshCw, Play, Square, RotateCcw,
-    Settings, Building2, Database, Layout as LayoutIcon, Cpu, Lock
+    Trash2, ExternalLink, MoreHorizontal,
+    Zap, Shield,
+    Settings, Building2, Database, Layout as LayoutIcon, Cpu, Lock,
+    FileText, BarChart3, Container, Gauge
 } from "lucide-react";
 
 import ServiceCatalogModal from "./components/ServiceCatalogModal";
@@ -20,6 +23,10 @@ import ServiceGraph from "./components/ServiceGraph";
 import SettingsMembers from "./components/SettingsMembers";
 import SettingsModal from "./components/SettingsModal";
 import GlobalDashboard from "./pages/GlobalDashboard";
+import ObservabilityDashboard from "./pages/ObservabilityDashboard";
+import InfrastructureDashboard from "./pages/InfrastructureDashboard";
+import DeliveryDashboard from "./pages/DeliveryDashboard";
+import SecurityDashboard from "./pages/SecurityDashboard";
 import { useAuth } from "./contexts/AuthContext";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -61,7 +68,7 @@ const SidebarItem = ({ icon: Icon, label, active, hasSub, onClick, collapsed }: 
             <Icon className={`w-4 h-4 transition-colors ${active ? "text-[#E3E3E3]" : "text-[#888] group-hover:text-[#AAA]"}`} />
             {!collapsed && <span className="font-medium whitespace-nowrap">{label}</span>}
         </div>
-        {!collapsed && hasSub && <ChevronDown className="w-3 h-3 text-[#555]" />}
+        {!collapsed && hasSub && <ChevronRight className="w-3 h-3 text-[#555]" />}
     </button>
 );
 
@@ -186,11 +193,11 @@ const ViewToolbar = ({ sortBy, onSortToggle, filterMode, onFilterChange, viewMod
 };
 
 const Breadcrumbs = ({ viewState, onNavigate }: { viewState: ViewState, onNavigate: (v: ViewState) => void }) => {
-    if (viewState.type === 'GLOBAL') {
+    if (viewState.type === 'GLOBAL' || viewState.type === 'OBSERVABILITY') {
         return (
             <div className="flex items-center gap-2 text-sm text-[#E3E3E3] h-full">
-                <Building2 className="w-4 h-4 text-[#888]" />
-                <span className="font-semibold tracking-wide">Platform Overview</span>
+                {viewState.type === 'GLOBAL' ? <Building2 className="w-4 h-4 text-[#888]" /> : <Activity className="w-4 h-4 text-[#888]" />}
+                <span className="font-semibold tracking-wide">{viewState.type === 'GLOBAL' ? 'Platform Overview' : 'Observability Center'}</span>
             </div>
         );
     }
@@ -772,6 +779,9 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
 export default function Dashboard() {
     const { token, logout } = useAuth();
     const [viewState, setViewState] = useState<ViewState>({ type: 'GLOBAL' });
+    const prevViewStateRef = useRef<ViewState>({ type: 'GLOBAL' });
+    const [obsTab, setObsTab] = useState('overview');
+    const [infraTab, setInfraTab] = useState('nodes');
     const [viewMode, setViewMode] = useState<'GRID' | 'GRAPH'>('GRID');
     const [showServiceWizard, setShowServiceWizard] = useState(false);
     const [showProjectModal, setShowProjectModal] = useState(false);
@@ -781,8 +791,8 @@ export default function Dashboard() {
     const [showServiceCatalog, setShowServiceCatalog] = useState(false); // Service Catalog State
     const [initialServiceType, setInitialServiceType] = useState<"backend" | "frontend" | "database" | "worker">("backend");
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(true);
     const [isTeamsOpen, setIsTeamsOpen] = useState(true);
+    const [isOpsOpen, setIsOpsOpen] = useState(true);
 
     // Data
     const [orgs, setOrgs] = useState<Organization[]>([]);
@@ -1076,103 +1086,152 @@ export default function Dashboard() {
 
                 {/* Sidebar Content */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-6">
-
-                    {/* Navigation */}
-                    <div className="space-y-0.5">
-                        <SidebarItem icon={Building2} label="Platform Overview" active={viewState.type === 'GLOBAL'} collapsed={!isSidebarOpen} onClick={() => { setCurrentTeam(null); setViewState({ type: 'GLOBAL' }); }} />
-                        <SidebarItem icon={Layers} label="Projects" active={viewState.type === 'ROOT' || viewState.type === 'PROJECT' || viewState.type === 'SERVICE'} collapsed={!isSidebarOpen} onClick={() => setViewState({ type: 'ROOT' })} />
-                        <SidebarItem icon={Inbox} label="Notifications" collapsed={!isSidebarOpen} />
-                        <SidebarItem icon={Activity} label="Activity" collapsed={!isSidebarOpen} />
-                        <SidebarItem icon={Bell} label="Alerts" collapsed={!isSidebarOpen} />
-                    </div>
-
-                    {/* Project/Environment Scope */}
-                    {isSidebarOpen && <div className="pt-2">
-                        <div
-                            className="px-3 mb-2 flex items-center justify-between group cursor-pointer"
-                            onClick={() => setIsWorkspaceOpen(!isWorkspaceOpen)}
-                        >
-                            <span className="text-[10px] font-semibold text-[#666] uppercase tracking-wider group-hover:text-[#888] transition-colors">Workspace</span>
-                            <ChevronDown className={`w-3 h-3 text-[#555] transition-transform ${isWorkspaceOpen ? 'rotate-180' : ''}`} />
+                    {viewState.type === 'OBSERVABILITY' ? (
+                        <div className="space-y-0.5">
+                            <button
+                                onClick={() => setViewState(prevViewStateRef.current)}
+                                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-[#888] hover:text-[#E3E3E3] hover:bg-[#2C2C2C]/30 mb-4"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                <span className="font-medium">Observability</span>
+                            </button>
+                            
+                            <SidebarItem icon={LayoutIcon} label="Overview" active={obsTab === 'overview'} collapsed={!isSidebarOpen} onClick={() => setObsTab('overview')} />
+                            <SidebarItem icon={FileText} label="Service Logs" active={obsTab === 'logs'} collapsed={!isSidebarOpen} onClick={() => setObsTab('logs')} />
+                            <SidebarItem icon={BarChart3} label="Cluster Insights" active={obsTab === 'insights'} collapsed={!isSidebarOpen} onClick={() => setObsTab('insights')} />
+                            <SidebarItem icon={Bell} label="Alerts & Rules" active={obsTab === 'alerts'} collapsed={!isSidebarOpen} onClick={() => setObsTab('alerts')} />
+                            
+                            {isSidebarOpen && <div className="pt-6 pb-2">
+                                <span className="text-[10px] font-semibold text-[#666] uppercase tracking-wider px-3">Infrastructure</span>
+                            </div>}
+                            <SidebarItem icon={Container} label="Deployments" active={obsTab === 'deployments'} collapsed={!isSidebarOpen} onClick={() => setObsTab('deployments')} />
+                            <SidebarItem icon={Gauge} label="Resource Metrics" active={obsTab === 'resources'} collapsed={!isSidebarOpen} onClick={() => setObsTab('resources')} />
+                            <SidebarItem icon={Server} label="Node Health" active={obsTab === 'nodes'} collapsed={!isSidebarOpen} onClick={() => setObsTab('nodes')} />
+                            
+                            {isSidebarOpen && <div className="pt-6 pb-2">
+                                <span className="text-[10px] font-semibold text-[#666] uppercase tracking-wider px-3">Security</span>
+                            </div>}
+                            <SidebarItem icon={Shield} label="Audit Trail" active={obsTab === 'audit'} collapsed={!isSidebarOpen} onClick={() => setObsTab('audit')} />
+                            <SidebarItem icon={Lock} label="Network Policies" active={obsTab === 'network'} collapsed={!isSidebarOpen} onClick={() => setObsTab('network')} />
                         </div>
-                        <AnimatePresence initial={false}>
-                            {isWorkspaceOpen && (
-                                <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: 'auto', opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    className="space-y-0.5 overflow-hidden"
-                                >
-                                    <SidebarItem icon={Box} label="Active Environments" collapsed={false} />
-                                    <SidebarItem icon={Server} label="Compute Nodes" collapsed={false} />
-                                    <SidebarItem icon={Database} label="Storage Volumes" collapsed={false} />
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>}
-
-                    {/* Teams UI using sidebar logic */}
-                    {isSidebarOpen && <div className="pt-2">
-                        <div
-                            className="px-3 mb-2 flex items-center justify-between group cursor-pointer"
-                            onClick={() => setIsTeamsOpen(!isTeamsOpen)}
-                        >
-                            <span className="text-[10px] font-semibold text-[#666] uppercase tracking-wider group-hover:text-[#888] transition-colors">Teams</span>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); setShowCreateTeam(true); }}
-                                    className="p-1 hover:bg-[#2C2C2C] rounded text-[#888] hover:text-[#E3E3E3]"
-                                    title="Create Team"
-                                >
-                                    <Plus className="w-3 h-3" />
-                                </button>
+                    ) : viewState.type === ('INFRA' as any) ? (
+                        <div className="space-y-0.5">
+                            <button
+                                onClick={() => setViewState(prevViewStateRef.current)}
+                                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-[#888] hover:text-[#E3E3E3] hover:bg-[#2C2C2C]/30 mb-4"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                <span className="font-medium">Infrastructure</span>
+                            </button>
+                            
+                            <SidebarItem icon={Server} label="Compute Nodes" active={infraTab === 'nodes'} collapsed={!isSidebarOpen} onClick={() => setInfraTab('nodes')} />
+                            <SidebarItem icon={Database} label="Storage Volumes" active={infraTab === 'storage'} collapsed={!isSidebarOpen} onClick={() => setInfraTab('storage')} />
+                            <SidebarItem icon={Globe} label="Network Assets" active={infraTab === 'network'} collapsed={!isSidebarOpen} onClick={() => setInfraTab('network')} />
+                            <SidebarItem icon={Layers} label="Topology Map" active={infraTab === 'topology'} collapsed={!isSidebarOpen} onClick={() => setInfraTab('topology')} />
+                        </div>
+                    ) : (
+                        <>
+                            {/* Navigation */}
+                            <div className="space-y-0.5">
+                                <SidebarItem icon={Building2} label="Platform Overview" active={viewState.type === 'GLOBAL'} collapsed={!isSidebarOpen} onClick={() => { setCurrentTeam(null); setViewState({ type: 'GLOBAL' }); }} />
+                                <SidebarItem icon={LineChart} label="Observability" active={viewState.type === 'OBSERVABILITY'} hasSub collapsed={!isSidebarOpen} onClick={() => { prevViewStateRef.current = viewState; setCurrentTeam(null); setViewState({ type: 'OBSERVABILITY' }); }} />
+                                <SidebarItem icon={Layers} label="Projects" active={viewState.type === 'ROOT' || viewState.type === 'PROJECT' || viewState.type === 'SERVICE'} collapsed={!isSidebarOpen} onClick={() => setViewState({ type: 'ROOT' })} />
+                                <SidebarItem icon={Bell} label="Notifications" collapsed={!isSidebarOpen} onClick={() => {}} />
                             </div>
-                        </div>
 
-                        <AnimatePresence initial={false}>
-                            {isTeamsOpen && (
-                                <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: 'auto', opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    className="space-y-0.5 overflow-hidden"
-                                >
-                                    {teams.length === 0 ? (
-                                        <div className="px-3 py-2 text-xs text-[#555] italic">No teams in this org yet.</div>
-                                    ) : (
-                                        teams.map((t, i) => (
-                                            <div
-                                                key={t.id || `team-${i}`}
-                                                onClick={() => {
-                                                    setCurrentTeam(t);
-                                                    setViewState({ type: 'ROOT' });
-                                                }}
-                                                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md text-sm transition-colors cursor-pointer group ${currentTeam?.id === t.id ? "bg-[#2C2C2C]/60 text-[#E3E3E3]" : "text-[#888] hover:bg-[#2C2C2C]/30 hover:text-[#E3E3E3]"}`}
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-4 h-4 rounded bg-[#222] flex items-center justify-center text-[10px] border border-[#333] shadow-sm">
-                                                        {t.name.substring(0, 1).toUpperCase()}
-                                                    </div>
-                                                    <span className="truncate max-w-[130px] font-medium">{t.name}</span>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-
-                                    {/* Settings link inside Teams section */}
-                                    <div className="mt-4 pt-4 border-t border-[#242424]">
-                                        <SidebarItem
-                                            icon={Settings}
-                                            label="Org Settings"
-                                            active={viewState.type === 'SETTINGS'}
-                                            onClick={() => setViewState({ type: 'SETTINGS', view: 'MEMBERS' })}
-                                            collapsed={!isSidebarOpen}
-                                        />
+                            {/* Operations Accordion */}
+                            {isSidebarOpen && (
+                                <div className="mt-8 pt-4 border-t border-[#242424]">
+                                    <div 
+                                        className="px-3 mb-2 flex items-center justify-between group cursor-pointer"
+                                        onClick={() => setIsOpsOpen(!isOpsOpen)}
+                                    >
+                                        <span className="text-[10px] font-semibold text-[#666] uppercase tracking-wider group-hover:text-[#888] transition-colors flex items-center gap-2">
+                                            <Activity className="w-3 h-3" /> Operations
+                                        </span>
+                                        <ChevronDown className={`w-3 h-3 text-[#444] transition-transform ${isOpsOpen ? '' : '-rotate-90'}`} />
                                     </div>
-                                </motion.div>
+                                    <AnimatePresence initial={false}>
+                                        {isOpsOpen && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="space-y-0.5 overflow-hidden"
+                                            >
+                                                <SidebarItem icon={Server} label="Infrastructure" active={viewState.type === 'INFRA'} hasSub collapsed={!isSidebarOpen} onClick={() => { prevViewStateRef.current = viewState; setViewState({ type: 'INFRA' }); }} />
+                                                <SidebarItem icon={Zap} label="Deployments" active={viewState.type === 'DELIVERY'} hasSub collapsed={!isSidebarOpen} onClick={() => { prevViewStateRef.current = viewState; setViewState({ type: 'DELIVERY' }); }} />
+                                                <SidebarItem icon={Shield} label="Security" active={viewState.type === 'SECURITY'} hasSub collapsed={!isSidebarOpen} onClick={() => { prevViewStateRef.current = viewState; setViewState({ type: 'SECURITY' }); }} />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
                             )}
-                        </AnimatePresence>
-                    </div>}
+
+                            {/* Teams UI using sidebar logic */}
+                            {isSidebarOpen && <div className="pt-2">
+                                <div
+                                    className="px-3 mb-2 flex items-center justify-between group cursor-pointer"
+                                    onClick={() => setIsTeamsOpen(!isTeamsOpen)}
+                                >
+                                    <span className="text-[10px] font-semibold text-[#666] uppercase tracking-wider group-hover:text-[#888] transition-colors">Teams</span>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setShowCreateTeam(true); }}
+                                            className="p-1 hover:bg-[#2C2C2C] rounded text-[#888] hover:text-[#E3E3E3]"
+                                            title="Create Team"
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <AnimatePresence initial={false}>
+                                    {isTeamsOpen && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="space-y-0.5 overflow-hidden"
+                                        >
+                                            {teams.length === 0 ? (
+                                                <div className="px-3 py-2 text-xs text-[#555] italic">No teams in this org yet.</div>
+                                            ) : (
+                                                teams.map((t, i) => (
+                                                    <div
+                                                        key={t.id || `team-${i}`}
+                                                        onClick={() => {
+                                                            setCurrentTeam(t);
+                                                            setViewState({ type: 'ROOT' });
+                                                        }}
+                                                        className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md text-sm transition-colors cursor-pointer group ${currentTeam?.id === t.id ? "bg-[#2C2C2C]/60 text-[#E3E3E3]" : "text-[#888] hover:bg-[#2C2C2C]/30 hover:text-[#E3E3E3]"}`}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-4 h-4 rounded bg-[#222] flex items-center justify-center text-[10px] border border-[#333] shadow-sm">
+                                                                {t.name.substring(0, 1).toUpperCase()}
+                                                            </div>
+                                                            <span className="truncate max-w-[130px] font-medium">{t.name}</span>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+
+                                            {/* Settings link inside Teams section */}
+                                            <div className="mt-4 pt-4 border-t border-[#242424]">
+                                                <SidebarItem
+                                                    icon={Settings}
+                                                    label="Org Settings"
+                                                    active={viewState.type === 'SETTINGS'}
+                                                    onClick={() => setViewState({ type: 'SETTINGS', view: 'MEMBERS' })}
+                                                    collapsed={!isSidebarOpen}
+                                                />
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>}
+                        </>
+                    )}
                 </div>
 
                 {/* User Profile */}
@@ -1204,20 +1263,22 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <div className="relative group hidden sm:block">
-                            <Search className="w-4 h-4 text-[#555] absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-[#E3E3E3] transition-colors" />
-                            <input
-                                type="text"
-                                placeholder={`Search ${viewState.type === 'PROJECT' ? 'deployments' : 'projects'}...`}
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                className="bg-[#141414] border border-[#2C2C2C] rounded-md pl-9 pr-3 py-1.5 text-sm w-[240px] focus:outline-none focus:border-[#444] focus:ring-1 focus:ring-[#444] transition-all text-[#E3E3E3] placeholder-[#555]"
-                            />
-                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-                                <kbd className="hidden md:inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono text-[#555] bg-[#111] border border-[#333] rounded">⌘</kbd>
-                                <kbd className="hidden md:inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono text-[#555] bg-[#111] border border-[#333] rounded">K</kbd>
+                        {viewState.type !== 'OBSERVABILITY' && (
+                            <div className="relative group hidden sm:block">
+                                <Search className="w-4 h-4 text-[#555] absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-[#E3E3E3] transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder={`Search ${viewState.type === 'PROJECT' ? 'deployments' : 'projects'}...`}
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    className="bg-[#141414] border border-[#2C2C2C] rounded-md pl-9 pr-3 py-1.5 text-sm w-[240px] focus:outline-none focus:border-[#444] focus:ring-1 focus:ring-[#444] transition-all text-[#E3E3E3] placeholder-[#555]"
+                                />
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                                    <kbd className="hidden md:inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono text-[#555] bg-[#111] border border-[#333] rounded">⌘</kbd>
+                                    <kbd className="hidden md:inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono text-[#555] bg-[#111] border border-[#333] rounded">K</kbd>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {(viewState.type === 'ROOT' || viewState.type === 'GLOBAL') && (
                             <Button onClick={() => setShowProjectModal(true)} size="sm" className="bg-white text-black hover:bg-white/90 shadow-md flex items-center gap-1.5 font-medium">
@@ -1243,7 +1304,7 @@ export default function Dashboard() {
                     ) : (
                         <>
                             {/* Toolbar (Only for Lists) */}
-                            {viewState.type !== 'SERVICE' && viewState.type !== 'GLOBAL' && (
+                            {viewState.type !== 'SERVICE' && viewState.type !== 'GLOBAL' && viewState.type !== 'OBSERVABILITY' && (
                                 <ViewToolbar
                                     sortBy={sortBy}
                                     onSortToggle={() => setSortBy(s => s === 'Date' ? 'Name' : 'Date')}
@@ -1257,6 +1318,18 @@ export default function Dashboard() {
                             {/* Views */}
                             {viewState.type === 'GLOBAL' && viewMode === 'GRID' && (
                                 <GlobalDashboard org={currentOrg} />
+                            )}
+                            {viewState.type === 'OBSERVABILITY' && (
+                                <ObservabilityDashboard org={currentOrg} activeTab={obsTab} />
+                            )}
+                            {viewState.type === 'INFRA' && (
+                                <InfrastructureDashboard org={currentOrg} activeTab={infraTab} />
+                            )}
+                            {viewState.type === 'DELIVERY' && (
+                                <DeliveryDashboard _org={currentOrg} _activeTab="history" />
+                            )}
+                            {viewState.type === 'SECURITY' && (
+                                <SecurityDashboard _org={currentOrg} _activeTab="summary" />
                             )}
                             {viewState.type === 'ROOT' && viewMode === 'GRID' && (
                                 <ProjectsGrid projects={filteredProjects} onSelect={handleProjectSelect} />

@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.UUID;
+import com.ork8stra.applicationmanagement.Application;
 
 @Slf4j
 @Service
@@ -57,8 +59,10 @@ public class MetricsService {
                     .mapToInt(cs -> cs.getRestartCount())
                     .sum();
 
-            if ("Running".equals(status)) running++;
-            else if ("Error".equals(status) || "CrashLoopBackOff".equals(status) || "Failed".equals(status)) error++;
+            if ("Running".equals(status))
+                running++;
+            else if ("Error".equals(status) || "CrashLoopBackOff".equals(status) || "Failed".equals(status))
+                error++;
 
             podStatsList.add(PodStats.builder()
                     .name(pod.getMetadata().getName())
@@ -77,7 +81,7 @@ public class MetricsService {
             List<PodMetrics> metrics = allMetrics.stream()
                     .filter(pm -> appPodNames.contains(pm.getMetadata().getName()))
                     .collect(Collectors.toList());
-            
+
             totalCpu = metrics.stream()
                     .flatMap(pm -> pm.getContainers().stream())
                     .mapToDouble(c -> parseCpu(c.getUsage().get("cpu").getAmount()))
@@ -112,16 +116,117 @@ public class MetricsService {
                 .build();
     }
 
+    @Data
+    @Builder
+    public static class ProjectMetrics {
+        private UUID projectId;
+        private int totalApps;
+        private int totalPods;
+        private int runningPods;
+        private int errorPods;
+        private double totalCpuUsageCores;
+        private long totalMemoryUsageBytes;
+        private int healthScore;
+        private List<AppSummaryMetrics> appBreakdown;
+    }
+
+    @Data
+    @Builder
+    public static class AppSummaryMetrics {
+        private UUID appId;
+        private String appName;
+        private int pods;
+        private double cpu;
+        private long memory;
+        private String status;
+        private int restartCount;
+        private String timestamp;
+    }
+
+    private int calculateHealthScore(int totalPods, int errorPods, double totalCpuUsage, long totalMemoryUsage) {
+        if (totalPods == 0) return 100;
+        if (errorPods == totalPods) return 0;
+        
+        int score = 100;
+        double errorPct = (double) errorPods / totalPods;
+        score -= (int) (errorPct * 50);
+        
+        // Saturation estimate
+        if (totalCpuUsage > 4.0 || totalMemoryUsage > 4L * 1024 * 1024 * 1024) {
+            score -= 20;
+        }
+        
+        return Math.max(0, score);
+    }
+
+    public ProjectMetrics getProjectMetrics(UUID projectId, List<Application> apps, String namespace) {
+        int totalPods = 0;
+        int runningPods = 0;
+        int errorPods = 0;
+        double totalCpu = 0;
+        long totalMem = 0;
+        List<AppSummaryMetrics> breakdown = new ArrayList<>();
+
+        for (Application app : apps) {
+            AppMetrics appStats = getApplicationMetrics(namespace, toKubernetesName(app.getName()));
+            totalPods += appStats.getTotalPods();
+            runningPods += appStats.getRunningPods();
+            errorPods += appStats.getErrorPods();
+            totalCpu += appStats.getCpuUsageCores();
+            totalMem += appStats.getMemoryUsageBytes();
+
+            int restarts = appStats.getPods().stream().mapToInt(PodStats::getRestarts).sum();
+
+            breakdown.add(AppSummaryMetrics.builder()
+                    .appId(app.getId())
+                    .appName(app.getName())
+                    .pods(appStats.getTotalPods())
+                    .cpu(appStats.getCpuUsageCores())
+                    .memory(appStats.getMemoryUsageBytes())
+                    .restartCount(restarts)
+                    .status(appStats.getTotalPods() > 0
+                            ? (appStats.getRunningPods() == appStats.getTotalPods() ? "Healthy" : "Degraded")
+                            : "Stopped")
+                    .build());
+        }
+
+        int healthScore = calculateHealthScore(totalPods, errorPods, totalCpu, totalMem);
+
+        return ProjectMetrics.builder()
+                .projectId(projectId)
+                .totalApps(apps.size())
+                .totalPods(totalPods)
+                .runningPods(runningPods)
+                .errorPods(errorPods)
+                .totalCpuUsageCores(totalCpu)
+                .totalMemoryUsageBytes(totalMem)
+                .healthScore(healthScore)
+                .appBreakdown(breakdown)
+                .build();
+    }
+
+    private String toKubernetesName(String rawName) {
+        String normalized = rawName.toLowerCase().replaceAll("[^a-z0-0]", "-")
+                .replaceAll("-+", "-")
+                .replaceAll("^-|-$", "");
+        return normalized.isBlank() ? "app" : normalized;
+    }
+
     private double parseCpu(String cpu) {
-        if (cpu == null) return 0;
-        if (cpu.endsWith("n")) return Double.parseDouble(cpu.substring(0, cpu.length() - 1)) / 1_000_000_000.0;
-        if (cpu.endsWith("u")) return Double.parseDouble(cpu.substring(0, cpu.length() - 1)) / 1_000_000.0;
-        if (cpu.endsWith("m")) return Double.parseDouble(cpu.substring(0, cpu.length() - 1)) / 1000.0;
+        if (cpu == null)
+            return 0;
+        if (cpu.endsWith("n"))
+            return Double.parseDouble(cpu.substring(0, cpu.length() - 1)) / 1_000_000_000.0;
+        if (cpu.endsWith("u"))
+            return Double.parseDouble(cpu.substring(0, cpu.length() - 1)) / 1_000_000.0;
+        if (cpu.endsWith("m"))
+            return Double.parseDouble(cpu.substring(0, cpu.length() - 1)) / 1000.0;
         return Double.parseDouble(cpu);
     }
 
     private long parseMemory(String mem) {
-        if (mem == null) return 0;
+        if (mem == null)
+            return 0;
         long multiplier = 1;
         String value = mem;
         if (mem.endsWith("Ki")) {

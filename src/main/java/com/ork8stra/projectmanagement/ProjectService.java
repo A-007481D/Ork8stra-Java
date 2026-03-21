@@ -42,6 +42,10 @@ public class ProjectService {
         return projectRepository.findByTeamId(teamId);
     }
 
+    public List<Project> getAllProjects() {
+        return projectRepository.findAll();
+    }
+
     public Project getProjectById(UUID id) {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + id));
