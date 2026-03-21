@@ -775,6 +775,7 @@ export default function Dashboard() {
     const { token, logout } = useAuth();
     const [viewState, setViewState] = useState<ViewState>({ type: 'GLOBAL' });
     const prevViewStateRef = useRef<ViewState>({ type: 'GLOBAL' });
+    const [obsTab, setObsTab] = useState('overview');
     const [viewMode, setViewMode] = useState<'GRID' | 'GRAPH'>('GRID');
     const [showServiceWizard, setShowServiceWizard] = useState(false);
     const [showProjectModal, setShowProjectModal] = useState(false);
@@ -1089,23 +1090,23 @@ export default function Dashboard() {
                                 <span className="font-medium">Observability</span>
                             </button>
                             
-                            <SidebarItem icon={LayoutIcon} label="Overview" active={true} collapsed={!isSidebarOpen} onClick={() => {}} />
-                            <SidebarItem icon={FileText} label="Service Logs" active={false} collapsed={!isSidebarOpen} onClick={() => {}} />
-                            <SidebarItem icon={BarChart3} label="Cluster Insights" active={false} collapsed={!isSidebarOpen} onClick={() => {}} />
-                            <SidebarItem icon={Bell} label="Alerts & Rules" active={false} collapsed={!isSidebarOpen} onClick={() => {}} />
+                            <SidebarItem icon={LayoutIcon} label="Overview" active={obsTab === 'overview'} collapsed={!isSidebarOpen} onClick={() => setObsTab('overview')} />
+                            <SidebarItem icon={FileText} label="Service Logs" active={obsTab === 'logs'} collapsed={!isSidebarOpen} onClick={() => setObsTab('logs')} />
+                            <SidebarItem icon={BarChart3} label="Cluster Insights" active={obsTab === 'insights'} collapsed={!isSidebarOpen} onClick={() => setObsTab('insights')} />
+                            <SidebarItem icon={Bell} label="Alerts & Rules" active={obsTab === 'alerts'} collapsed={!isSidebarOpen} onClick={() => setObsTab('alerts')} />
                             
                             {isSidebarOpen && <div className="pt-6 pb-2">
                                 <span className="text-[10px] font-semibold text-[#666] uppercase tracking-wider px-3">Infrastructure</span>
                             </div>}
-                            <SidebarItem icon={Container} label="Deployments" active={false} collapsed={!isSidebarOpen} onClick={() => {}} />
-                            <SidebarItem icon={Gauge} label="Resource Metrics" active={false} collapsed={!isSidebarOpen} onClick={() => {}} />
-                            <SidebarItem icon={Server} label="Node Health" active={false} collapsed={!isSidebarOpen} onClick={() => {}} />
+                            <SidebarItem icon={Container} label="Deployments" active={obsTab === 'deployments'} collapsed={!isSidebarOpen} onClick={() => setObsTab('deployments')} />
+                            <SidebarItem icon={Gauge} label="Resource Metrics" active={obsTab === 'resources'} collapsed={!isSidebarOpen} onClick={() => setObsTab('resources')} />
+                            <SidebarItem icon={Server} label="Node Health" active={obsTab === 'nodes'} collapsed={!isSidebarOpen} onClick={() => setObsTab('nodes')} />
                             
                             {isSidebarOpen && <div className="pt-6 pb-2">
                                 <span className="text-[10px] font-semibold text-[#666] uppercase tracking-wider px-3">Security</span>
                             </div>}
-                            <SidebarItem icon={Shield} label="Audit Trail" active={false} collapsed={!isSidebarOpen} onClick={() => {}} />
-                            <SidebarItem icon={Lock} label="Network Policies" active={false} collapsed={!isSidebarOpen} onClick={() => {}} />
+                            <SidebarItem icon={Shield} label="Audit Trail" active={obsTab === 'audit'} collapsed={!isSidebarOpen} onClick={() => setObsTab('audit')} />
+                            <SidebarItem icon={Lock} label="Network Policies" active={obsTab === 'network'} collapsed={!isSidebarOpen} onClick={() => setObsTab('network')} />
                         </div>
                     ) : (
                         <>
@@ -1296,7 +1297,7 @@ export default function Dashboard() {
                                 <GlobalDashboard org={currentOrg} />
                             )}
                             {viewState.type === 'OBSERVABILITY' && (
-                                <ObservabilityDashboard org={currentOrg} />
+                                <ObservabilityDashboard org={currentOrg} activeTab={obsTab} />
                             )}
                             {viewState.type === 'ROOT' && viewMode === 'GRID' && (
                                 <ProjectsGrid projects={filteredProjects} onSelect={handleProjectSelect} />
