@@ -1179,7 +1179,7 @@ export default function Dashboard() {
                             {/* Navigation */}
                             <div className="space-y-0.5">
                                 <SidebarItem icon={Building2} label="Platform Overview" active={viewState.type === 'GLOBAL'} collapsed={!isSidebarOpen} onClick={() => { setCurrentTeam(null); setViewState({ type: 'GLOBAL' }); }} />
-                                <SidebarItem icon={LineChart} label="Observability" active={viewState.type === 'OBSERVABILITY'} hasSub collapsed={!isSidebarOpen} onClick={() => { prevViewStateRef.current = viewState; setCurrentTeam(null); setViewState({ type: 'OBSERVABILITY' }); }} />
+                                <SidebarItem icon={LineChart} label="Observability" active={viewState.type === 'OBSERVABILITY'} hasSub collapsed={!isSidebarOpen} onClick={() => { prevViewStateRef.current = viewState; setCurrentTeam(null); setObsTab('overview'); setViewState({ type: 'OBSERVABILITY' }); }} />
                                 <SidebarItem icon={Layers} label="Projects" active={viewState.type === 'ROOT' || viewState.type === 'PROJECT' || viewState.type === 'SERVICE'} collapsed={!isSidebarOpen} onClick={() => setViewState({ type: 'ROOT' })} />
                                 <SidebarItem icon={Bell} label="Notifications" collapsed={!isSidebarOpen} onClick={() => {}} />
                             </div>
@@ -1204,7 +1204,7 @@ export default function Dashboard() {
                                                 exit={{ height: 0, opacity: 0 }}
                                                 className="space-y-0.5 overflow-hidden"
                                             >
-                                                <SidebarItem icon={Server} label="Infrastructure" active={viewState.type === 'INFRA'} hasSub collapsed={!isSidebarOpen} onClick={() => { prevViewStateRef.current = viewState; setViewState({ type: 'INFRA' }); }} />
+                                                <SidebarItem icon={Server} label="Infrastructure" active={viewState.type === 'INFRA'} hasSub collapsed={!isSidebarOpen} onClick={() => { prevViewStateRef.current = viewState; setInfraTab('nodes'); setViewState({ type: 'INFRA' }); }} />
                                                 <SidebarItem icon={Zap} label="Deployments" active={viewState.type === 'DELIVERY'} hasSub collapsed={!isSidebarOpen} onClick={() => { prevViewStateRef.current = viewState; setViewState({ type: 'DELIVERY' }); }} />
                                                 <SidebarItem icon={Shield} label="Security" active={viewState.type === 'SECURITY'} hasSub collapsed={!isSidebarOpen} onClick={() => { prevViewStateRef.current = viewState; setViewState({ type: 'SECURITY' }); }} />
                                             </motion.div>
