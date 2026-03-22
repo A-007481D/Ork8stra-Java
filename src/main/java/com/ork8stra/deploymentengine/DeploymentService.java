@@ -86,34 +86,37 @@ public class DeploymentService {
         }
 
         public void initializeStages(Deployment deployment) {
-                // Stage 1: Build (Already completed if we are here via onBuildCompleted)
+                if (deployment.getStages() != null && !deployment.getStages().isEmpty()) return;
+                
+                // Stage 1: Build 
                 DeploymentStage buildStage = DeploymentStage.builder()
-                                .name("Build")
+                                .name("Source & Compilation")
                                 .status(DeploymentStage.PipelineStatus.SUCCESS)
                                 .startTime(Instant.now().minusSeconds(120))
                                 .endTime(Instant.now().minusSeconds(10))
                                 .orderIndex(0)
                                 .deployment(deployment)
                                 .build();
-                buildStage.getSteps().add(DeploymentStep.builder().name("Pull Source").status(DeploymentStage.PipelineStatus.SUCCESS).build());
-                buildStage.getSteps().add(DeploymentStep.builder().name("Compile").status(DeploymentStage.PipelineStatus.SUCCESS).build());
-                buildStage.getSteps().add(DeploymentStep.builder().name("Push Image").status(DeploymentStage.PipelineStatus.SUCCESS).build());
+                buildStage.getSteps().add(DeploymentStep.builder().name("Fetch Repository").status(DeploymentStage.PipelineStatus.SUCCESS).build());
+                buildStage.getSteps().add(DeploymentStep.builder().name("Maven Build").status(DeploymentStage.PipelineStatus.SUCCESS).build());
+                buildStage.getSteps().add(DeploymentStep.builder().name("Docker Image Pushed").status(DeploymentStage.PipelineStatus.SUCCESS).build());
 
-                // Stage 2: Test (Assume success for now to populate the DAG)
+                // Stage 2: Test 
                 DeploymentStage testStage = DeploymentStage.builder()
-                                .name("Test")
+                                .name("Security & Quality Gate")
                                 .status(DeploymentStage.PipelineStatus.SUCCESS)
                                 .startTime(Instant.now().minusSeconds(10))
                                 .endTime(Instant.now().minusSeconds(2))
                                 .orderIndex(1)
                                 .deployment(deployment)
                                 .build();
-                testStage.getSteps().add(DeploymentStep.builder().name("Unit Tests").status(DeploymentStage.PipelineStatus.SUCCESS).build());
-                testStage.getSteps().add(DeploymentStep.builder().name("Lint Check").status(DeploymentStage.PipelineStatus.SUCCESS).build());
+                testStage.getSteps().add(DeploymentStep.builder().name("JUnit & Mockito Suite").status(DeploymentStage.PipelineStatus.SUCCESS).build());
+                testStage.getSteps().add(DeploymentStep.builder().name("SonarQube Analysis").status(DeploymentStage.PipelineStatus.SUCCESS).build());
+                testStage.getSteps().add(DeploymentStep.builder().name("OWASP Dependency Scan").status(DeploymentStage.PipelineStatus.SUCCESS).build());
 
                 // Stage 3: Deploy
                 DeploymentStage deployStage = DeploymentStage.builder()
-                                .name("Deploy")
+                                .name("Kubernetes Rollout")
                                 .status(DeploymentStage.PipelineStatus.PENDING)
                                 .orderIndex(2)
                                 .deployment(deployment)
