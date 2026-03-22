@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -86,7 +87,11 @@ public class DeploymentService {
         }
 
         public void initializeStages(Deployment deployment) {
-                if (deployment.getStages() != null && !deployment.getStages().isEmpty()) return;
+                if (deployment.getStages() == null) {
+                    deployment.setStages(new ArrayList<>());
+                }
+                
+                if (!deployment.getStages().isEmpty()) return;
                 
                 // Final safety: ensures we don't duplicate if partially initialized
                 List<String> existingNames = deployment.getStages().stream()
