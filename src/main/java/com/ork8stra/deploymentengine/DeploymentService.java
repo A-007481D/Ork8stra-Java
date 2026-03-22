@@ -79,8 +79,8 @@ public class DeploymentService {
                 deployment.setReplicas(1);
                 deployment.setStatus(DeploymentStatus.HEALTHY);
 
-                // Update "Deploy" stage to SUCCESS
-                updateStageStatus(deployment, "Deploy", DeploymentStage.PipelineStatus.SUCCESS);
+                // Update "Kubernetes Rollout" stage to SUCCESS
+                updateStageStatus(deployment, "Kubernetes Rollout", DeploymentStage.PipelineStatus.SUCCESS);
 
                 return deploymentRepository.save(deployment);
         }
