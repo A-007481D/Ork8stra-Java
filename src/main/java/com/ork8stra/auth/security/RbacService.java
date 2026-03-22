@@ -3,6 +3,8 @@ package com.ork8stra.auth.security;
 import com.ork8stra.organizationmanagement.OrgMember;
 import com.ork8stra.organizationmanagement.OrgMemberRepository;
 import com.ork8stra.organizationmanagement.OrgPolicyRepository;
+import com.ork8stra.organizationmanagement.Organization;
+import com.ork8stra.organizationmanagement.OrganizationRepository;
 import com.ork8stra.organizationmanagement.OrgRole;
 import com.ork8stra.teammanagement.TeamMemberRepository;
 import com.ork8stra.user.User;
@@ -24,12 +26,20 @@ public class RbacService {
     private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
     private final OrgPolicyRepository orgPolicyRepository;
+    private final OrganizationRepository organizationRepository;
 
     public boolean hasOrgRole(UUID orgId, String minRole) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
             log.warn("RBAC: No current user found in security context");
             return false;
+        }
+
+        // Developer/Owner Bypass: If user is the organization owner, grant all access
+        Optional<Organization> org = organizationRepository.findById(orgId);
+        if (org.isPresent() && currentUser.getId().equals(org.get().getOwnerId())) {
+            log.info("RBAC: Granting OWNER/DEVELOPER bypass for user {} in org {}", currentUser.getUsername(), orgId);
+            return true;
         }
 
         Optional<OrgMember> membership = orgMemberRepository.findByUserIdAndOrganizationId(currentUser.getId(), orgId);
@@ -65,6 +75,12 @@ public class RbacService {
     public boolean hasPermission(UUID orgId, String permission) {
         User currentUser = getCurrentUser();
         if (currentUser == null) return false;
+
+        // Developer/Owner Bypass: If user is the organization owner, grant all permissions
+        Optional<Organization> org = organizationRepository.findById(orgId);
+        if (org.isPresent() && currentUser.getId().equals(org.get().getOwnerId())) {
+            return true;
+        }
 
         Optional<OrgMember> membership = orgMemberRepository.findByUserIdAndOrganizationId(currentUser.getId(), orgId);
         if (membership.isEmpty()) return false;
