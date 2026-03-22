@@ -5,14 +5,12 @@ import {
     Search, RefreshCw
 } from "lucide-react";
 import { Card, CardHeader, CardContent } from "../components/ui/Card";
-import type { Organization } from "../types/index";
 
 interface InfrastructureDashboardProps {
-    org: Organization | null;
     activeTab: string;
 }
 
-export default function InfrastructureDashboard({ org, activeTab }: InfrastructureDashboardProps) {
+export default function InfrastructureDashboard({ activeTab }: InfrastructureDashboardProps) {
     const [token] = useState(localStorage.getItem("token") || "");
     const [isLoading, setIsLoading] = useState(false);
     const [data, setData] = useState<any>(null);
@@ -25,9 +23,9 @@ export default function InfrastructureDashboard({ org, activeTab }: Infrastructu
             let endpoint = "";
             switch (activeTab) {
                 case 'nodes': endpoint = "/api/v1/observability/nodes"; break;
-                case 'storage': endpoint = "/api/v1/infra/storage"; break;
-                case 'network': endpoint = "/api/v1/infra/network"; break;
-                case 'topology': endpoint = "/api/v1/infra/topology"; break;
+                case 'storage': endpoint = "/api/v1/observability/infra/storage"; break;
+                case 'network': endpoint = "/api/v1/observability/infra/network"; break;
+                case 'topology': endpoint = "/api/v1/observability/infra/topology"; break;
                 default: endpoint = "/api/v1/observability/nodes";
             }
 

@@ -128,9 +128,11 @@ public class ObservabilityController {
         private String name;
         private String status;
         private String kubeletVersion;
-        private String os;
-        private String arch;
-        private String containerRuntime;
+        private String osImage;
+        private String architecture;
+        private String internalIP;
+        private String containerRuntimeVersion;
+        private String kernelVersion;
         private String cpuCapacity;
         private String memoryCapacity;
         private double cpuUsagePercent;
@@ -191,13 +193,21 @@ public class ObservabilityController {
                 podCount = 0;
             }
 
+            // Get Internal IP from addresses
+            String internalIP = nodeStatus.getAddresses().stream()
+                    .filter(addr -> "InternalIP".equals(addr.getType()))
+                    .map(NodeAddress::getAddress)
+                    .findFirst().orElse("N/A");
+
             result.add(NodeInfo.builder()
                     .name(name)
                     .status(statusText)
                     .kubeletVersion(sysInfo.getKubeletVersion())
-                    .os(sysInfo.getOperatingSystem())
-                    .arch(sysInfo.getArchitecture())
-                    .containerRuntime(sysInfo.getContainerRuntimeVersion())
+                    .osImage(sysInfo.getOsImage())
+                    .architecture(sysInfo.getArchitecture())
+                    .internalIP(internalIP)
+                    .containerRuntimeVersion(sysInfo.getContainerRuntimeVersion())
+                    .kernelVersion(sysInfo.getKernelVersion())
                     .cpuCapacity(capacity.getOrDefault("cpu", new Quantity("0")).getAmount() + " cores")
                     .memoryCapacity(formatBytes(memCap))
                     .cpuUsagePercent(Math.round(cpuUseFraction * 10.0) / 10.0)
@@ -227,7 +237,7 @@ public class ObservabilityController {
                 .inAnyNamespace().list().getItems();
 
         List<NetworkPolicyInfo> result = policies.stream()
-                .filter(p -> p.getMetadata().getNamespace().startsWith("project"))
+                .filter(p -> isUserNamespace(p.getMetadata().getNamespace()))
                 .map(p -> NetworkPolicyInfo.builder()
                         .name(p.getMetadata().getName())
                         .namespace(p.getMetadata().getNamespace())
@@ -263,7 +273,7 @@ public class ObservabilityController {
         List<StorageClass> storageClasses = kubernetesClient.storage().v1().storageClasses().list().getItems();
 
         List<StorageInfo> pvcList = pvcs.stream()
-                .filter(p -> p.getMetadata().getNamespace().startsWith("project"))
+                .filter(p -> isUserNamespace(p.getMetadata().getNamespace()))
                 .map(p -> StorageInfo.builder()
                         .name(p.getMetadata().getName())
                         .namespace(p.getMetadata().getNamespace())
@@ -300,7 +310,7 @@ public class ObservabilityController {
         // Services
         List<Service> services = kubernetesClient.services().inAnyNamespace().list().getItems();
         services.stream()
-                .filter(s -> s.getMetadata().getNamespace().startsWith("project"))
+                .filter(s -> isUserNamespace(s.getMetadata().getNamespace()))
                 .forEach(s -> assets.add(NetworkAsset.builder()
                         .name(s.getMetadata().getName())
                         .namespace(s.getMetadata().getNamespace())
@@ -313,7 +323,7 @@ public class ObservabilityController {
         // Ingresses
         List<Ingress> ingresses = kubernetesClient.network().v1().ingresses().inAnyNamespace().list().getItems();
         ingresses.stream()
-                .filter(i -> i.getMetadata().getNamespace().startsWith("project"))
+                .filter(i -> isUserNamespace(i.getMetadata().getNamespace()))
                 .forEach(i -> assets.add(NetworkAsset.builder()
                         .name(i.getMetadata().getName())
                         .namespace(i.getMetadata().getNamespace())
@@ -346,9 +356,13 @@ public class ObservabilityController {
             String ns = p.getK8sNamespace();
             int apps = applicationService.getApplicationsByProject(p.getId()).size();
             int pods = 0;
-            try {
-                pods = kubernetesClient.pods().inNamespace(ns).list().getItems().size();
-            } catch (Exception e) {}
+            if (ns != null && !ns.isBlank()) {
+                try {
+                    pods = kubernetesClient.pods().inNamespace(ns).list().getItems().size();
+                } catch (Exception e) {
+                    log.debug("Failed to list pods in namespace {}: {}", ns, e.getMessage());
+                }
+            }
 
             result.add(TopologyEntry.builder()
                     .projectName(p.getName())
@@ -488,5 +502,15 @@ public class ObservabilityController {
         if (bytes < 1024*1024) return String.format("%.1f KiB", bytes / 1024.0);
         if (bytes < 1024*1024*1024) return String.format("%.1f MiB", bytes / (1024.0*1024));
         return String.format("%.1f GiB", bytes / (1024.0*1024*1024));
+    }
+
+    private boolean isUserNamespace(String ns) {
+        if (ns == null) return false;
+        return !ns.equals("kube-system") && 
+               !ns.equals("kube-public") && 
+               !ns.equals("kube-node-lease") && 
+               !ns.equals("ingress-nginx") && 
+               !ns.equals("cert-manager") &&
+               !ns.equals("kubernetes-dashboard");
     }
 }

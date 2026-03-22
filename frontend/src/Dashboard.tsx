@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { Project, Service, Deployment, ViewState, Team, Organization } from "./types/index";
 import {
     Settings, Search, Bell, Plus, ChevronRight, ChevronDown, 
-    MoreVertical, LogOut, Layout as LayoutIcon, Laptop, Activity, 
-    Terminal, Globe, Shield, Database, Cpu, HardDrive, 
-    Users, Building2, User, HelpCircle, ChevronLeft,
+    Layout as LayoutIcon, Activity, 
+    Terminal, Globe, Shield, Database, Cpu, 
+    Building2, ChevronLeft,
     FileText, BarChart3, Container, Gauge, Server, Lock, Layers,
     Box, Filter, List as ListIcon, GitBranch, RefreshCw, 
     Play, Square, RotateCcw, Zap, LineChart, ArrowUpRight
@@ -1384,7 +1384,7 @@ export default function Dashboard() {
                                 <ObservabilityDashboard org={currentOrg} activeTab={obsTab} />
                             )}
                             {viewState.type === 'INFRA' && (
-                                <InfrastructureDashboard org={currentOrg} activeTab={infraTab} />
+                                <InfrastructureDashboard activeTab={infraTab} />
                             )}
                             {viewState.type === 'DELIVERY' && (
                                 <DeliveryDashboard _org={currentOrg} _activeTab="history" />
