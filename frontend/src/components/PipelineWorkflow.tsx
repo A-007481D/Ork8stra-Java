@@ -48,6 +48,9 @@ const PipelineWorkflow = ({ stages, onNodeClick }: PipelineWorkflowProps) => {
           name: stage.name, 
           status: stage.status, 
           duration,
+          startTime: stage.startTime,
+          endTime: stage.endTime,
+          estimatedDuration: stage.estimatedDuration,
           isFirst,
           isLast
         },
@@ -108,13 +111,13 @@ const PipelineWorkflow = ({ stages, onNodeClick }: PipelineWorkflowProps) => {
         panOnDrag={true}
       >
         <Background color="#334155" gap={20} size={1} />
-        <Controls 
-          className="!bg-[#15171C] !border-white/10 !fill-white" 
+        <Controls
+          className="!bg-[#15171C] !border-white/10 !fill-white"
           showInteractive={false}
         />
       </ReactFlow>
-      
-      {/* Marching Ants CSS Injection */}
+
+      {/* Marching Ants & Liquid Wave CSS Injection */}
       <style dangerouslySetInnerHTML={{ __html: `
         .react-flow__edge-path {
           transition: stroke 0.5s ease;
@@ -124,12 +127,24 @@ const PipelineWorkflow = ({ stages, onNodeClick }: PipelineWorkflowProps) => {
           animation: dashdraw 0.5s linear infinite;
         }
         @keyframes dashdraw {
-          from {
-            stroke-dashoffset: 16;
-          }
-          to {
-            stroke-dashoffset: 0;
-          }
+          from { stroke-dashoffset: 16; }
+          to { stroke-dashoffset: 0; }
+        }
+
+        .liquid-wave {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: 20px;
+          background: linear-gradient(to right, transparent, rgba(255,255,255,0.2), transparent);
+          transform: skewX(-20deg);
+          animation: wave-shimmer 2s infinite linear;
+        }
+
+        @keyframes wave-shimmer {
+          0% { transform: translateX(-100%) skewX(-20deg); opacity: 0; }
+          50% { opacity: 0.5; }
+          100% { transform: translateX(500%) skewX(-20deg); opacity: 0; }
         }
       `}} />
     </div>

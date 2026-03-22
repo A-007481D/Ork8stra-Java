@@ -1,8 +1,6 @@
 package com.ork8stra.api.dto;
 
 import com.ork8stra.deploymentengine.Deployment;
-import com.ork8stra.deploymentengine.DeploymentStage;
-import com.ork8stra.deploymentengine.DeploymentStep;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -37,6 +35,7 @@ public class DeploymentResponse {
         private String status;
         private Instant startTime;
         private Instant endTime;
+        private Long estimatedDuration;
         private List<StepResponse> steps;
     }
 
@@ -67,20 +66,21 @@ public class DeploymentResponse {
                 .build();
     }
 
-    private static StageResponse mapStage(DeploymentStage s) {
+    private static StageResponse mapStage(com.ork8stra.deploymentengine.DeploymentStage s) {
         return StageResponse.builder()
                 .id(s.getId())
                 .name(s.getName())
                 .status(s.getStatus().name())
                 .startTime(s.getStartTime())
                 .endTime(s.getEndTime())
+                .estimatedDuration(s.getEstimatedDuration())
                 .steps(s.getSteps() != null ? s.getSteps().stream()
                         .map(DeploymentResponse::mapStep)
                         .collect(Collectors.toList()) : List.of())
                 .build();
     }
 
-    private static StepResponse mapStep(DeploymentStep step) {
+    private static StepResponse mapStep(com.ork8stra.deploymentengine.DeploymentStep step) {
         return StepResponse.builder()
                 .id(step.getId())
                 .name(step.getName())

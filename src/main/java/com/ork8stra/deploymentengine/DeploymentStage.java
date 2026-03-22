@@ -43,6 +43,8 @@ public class DeploymentStage {
     @Builder.Default
     private List<DeploymentStep> steps = new ArrayList<>();
 
+    private Long estimatedDuration; // in seconds
+
     public enum PipelineStatus {
         PENDING, RUNNING, SUCCESS, FAILED, SKIPPED
     }

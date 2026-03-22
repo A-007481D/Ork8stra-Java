@@ -95,6 +95,7 @@ public class DeploymentService {
                                 .startTime(Instant.now().minusSeconds(120))
                                 .endTime(Instant.now().minusSeconds(10))
                                 .orderIndex(0)
+                                .estimatedDuration(120L)
                                 .deployment(deployment)
                                 .build();
                 buildStage.getSteps().add(DeploymentStep.builder().name("Fetch Repository").status(DeploymentStage.PipelineStatus.SUCCESS).build());
@@ -108,6 +109,7 @@ public class DeploymentService {
                                 .startTime(Instant.now().minusSeconds(10))
                                 .endTime(Instant.now().minusSeconds(2))
                                 .orderIndex(1)
+                                .estimatedDuration(45L)
                                 .deployment(deployment)
                                 .build();
                 testStage.getSteps().add(DeploymentStep.builder().name("JUnit & Mockito Suite").status(DeploymentStage.PipelineStatus.SUCCESS).build());
@@ -119,6 +121,7 @@ public class DeploymentService {
                                 .name("Kubernetes Rollout")
                                 .status(DeploymentStage.PipelineStatus.PENDING)
                                 .orderIndex(2)
+                                .estimatedDuration(30L)
                                 .deployment(deployment)
                                 .build();
                 deployStage.getSteps().add(DeploymentStep.builder().name("K8s Apply").status(DeploymentStage.PipelineStatus.PENDING).build());
