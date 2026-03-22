@@ -22,6 +22,7 @@ export default function PolicyManagement({ org, token }: PolicyManagementProps) 
     const [description, setDescription] = useState("");
     const [permissions, setPermissions] = useState("");
     const [creating, setCreating] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchPolicies = useCallback(async () => {
         setLoading(true);
@@ -29,12 +30,18 @@ export default function PolicyManagement({ org, token }: PolicyManagementProps) 
             const res = await fetch(`/api/v1/orgs/${org.id}/policies`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
+            if (res.status === 403) {
+                setError("You are not authorized to manage policies in this organization.");
+                return;
+            }
             if (res.ok) {
                 const data = await res.json();
                 setPolicies(data);
+                setError(null);
             }
         } catch (e) {
             console.error(e);
+            setError("Failed to fetch policies.");
         } finally {
             setLoading(false);
         }
@@ -90,6 +97,14 @@ export default function PolicyManagement({ org, token }: PolicyManagementProps) 
 
     return (
         <div className="space-y-8 animate-fade-in">
+            {error ? (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-8 text-center mt-8">
+                    <Shield className="w-12 h-12 text-red-500 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-bold text-white mb-2">Access Restricted</h3>
+                    <p className="text-[#888] text-sm max-w-md mx-auto">{error}</p>
+                </div>
+            ) : (
+                <>
             {/* Create Policy Form */}
             <div className="bg-[#111] border border-[#333] rounded-xl p-6">
                 <h2 className="text-lg font-semibold text-[#E3E3E3] mb-4 flex items-center gap-2">
@@ -191,6 +206,8 @@ export default function PolicyManagement({ org, token }: PolicyManagementProps) 
                     )}
                 </div>
             </div>
+                </>
+            )}
         </div>
     );
 }

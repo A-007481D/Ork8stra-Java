@@ -78,6 +78,19 @@ public class GlobalExceptionHandler {
                                 .build());
         }
 
+        @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+        public ResponseEntity<ErrorResponse> handleAccessDenied(
+                        org.springframework.security.access.AccessDeniedException ex,
+                        HttpServletRequest request) {
+                log.warn("Access denied on '{}': {}", request.getRequestURI(), ex.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorResponse.builder()
+                                .status(403)
+                                .error("Forbidden")
+                                .message("Access denied: Insufficient permissions")
+                                .path(request.getRequestURI())
+                                .build());
+        }
+
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
                 log.error("Unhandled exception on '{}'", request.getRequestURI(), ex);

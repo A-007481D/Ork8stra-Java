@@ -37,6 +37,7 @@ export default function SettingsMembers({ org, token }: SettingsMembersProps) {
     const [inviting, setInviting] = useState(false);
     const [generatingLink, setGeneratingLink] = useState(false);
     const [copiedToken, setCopiedToken] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchMembers = useCallback(async () => {
         setLoading(true);
@@ -46,9 +47,15 @@ export default function SettingsMembers({ org, token }: SettingsMembersProps) {
                 fetch(`/api/v1/orgs/${org.id}/members/invitations`, { headers: { "Authorization": `Bearer ${token}` } })
             ]);
             
+            if (memRes.status === 403 || invRes.status === 403) {
+                setError("You are not authorized to manage members in this organization.");
+                return;
+            }
+            
             if (memRes.ok) {
                 const data = await memRes.json();
                 setMembers(data);
+                setError(null);
             }
             if (invRes.ok) {
                 const data = await invRes.json();
@@ -56,6 +63,7 @@ export default function SettingsMembers({ org, token }: SettingsMembersProps) {
             }
         } catch (e) {
             console.error(e);
+            setError("Failed to fetch member data.");
         } finally {
             setLoading(false);
         }
@@ -161,7 +169,13 @@ export default function SettingsMembers({ org, token }: SettingsMembersProps) {
                 </div>
             </div>
 
-            {activeTab === 'MEMBERS' && (
+            {error ? (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-8 text-center">
+                    <Shield className="w-12 h-12 text-red-500 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-bold text-white mb-2">Access Restricted</h3>
+                    <p className="text-[#888] text-sm max-w-md mx-auto">{error}</p>
+                </div>
+            ) : activeTab === 'MEMBERS' && (
                 <>
                     {/* Invite Section */}
                     <div className="bg-[#111] border border-[#333] rounded-xl p-6 mb-8">
