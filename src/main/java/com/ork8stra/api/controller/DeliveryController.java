@@ -26,6 +26,7 @@ public class DeliveryController {
     private final BuildRepository buildRepository;
     private final ApplicationRepository applicationRepository;
     private final ProjectRepository projectRepository;
+    private final com.ork8stra.deploymentengine.DeploymentRepository deploymentRepository;
 
     @GetMapping("/builds")
     public List<BuildInfo> getBuilds() {
@@ -45,8 +46,17 @@ public class DeliveryController {
                     .orElse("Deleted Project");
         }
 
+        UUID deploymentId = deploymentRepository.findByApplicationId(b.getApplicationId())
+                .stream()
+                .filter(d -> d.getVersion().equals(b.getImageTag()))
+                .map(com.ork8stra.deploymentengine.Deployment::getId)
+                .findFirst()
+                .orElse(null);
+
         return new BuildInfo(
                 b.getId(),
+                b.getApplicationId(),
+                deploymentId,
                 appName,
                 projectName,
                 b.getStatus().name(),
@@ -61,6 +71,8 @@ public class DeliveryController {
     @AllArgsConstructor
     public static class BuildInfo {
         private UUID id;
+        private UUID applicationId;
+        private UUID deploymentId;
         private String applicationName;
         private String projectName;
         private String status;

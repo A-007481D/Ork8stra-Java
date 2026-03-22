@@ -1,0 +1,139 @@
+import { useMemo, useCallback, useEffect } from 'react';
+import ReactFlow, { 
+  Background, 
+  Controls, 
+  ConnectionLineType,
+  MarkerType,
+  useNodesState,
+  useEdgesState,
+  type Edge
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+import StageNode from './StageNode';
+
+const nodeTypes = {
+  stage: StageNode,
+};
+
+interface PipelineWorkflowProps {
+  stages: any[];
+  onNodeClick?: (stageId: string) => void;
+}
+
+const PipelineWorkflow = ({ stages, onNodeClick }: PipelineWorkflowProps) => {
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const initialElements = useMemo(() => {
+    const newNodes: any[] = [];
+    const newEdges: Edge[] = [];
+
+    stages.forEach((stage, index) => {
+      const isFirst = index === 0;
+      const isLast = index === stages.length - 1;
+      
+      // Calculate duration string
+      let duration = "";
+      if (stage.startTime) {
+        const start = new Date(stage.startTime).getTime();
+        const end = stage.endTime ? new Date(stage.endTime).getTime() : Date.now();
+        const diff = Math.floor((end - start) / 1000);
+        duration = diff > 0 ? `${diff}s` : "0s";
+      }
+
+      newNodes.push({
+        id: stage.id?.toString() || stage.name,
+        type: 'stage',
+        data: { 
+          name: stage.name, 
+          status: stage.status, 
+          duration,
+          isFirst,
+          isLast
+        },
+        position: { x: index * 250, y: 50 },
+      });
+
+      if (index > 0) {
+        const prevStage = stages[index - 1];
+        const isActive = stage.status === 'RUNNING' || (prevStage.status === 'SUCCESS' && stage.status === 'PENDING');
+        
+        newEdges.push({
+          id: `e-${index-1}-${index}`,
+          source: prevStage.id?.toString() || prevStage.name,
+          target: stage.id?.toString() || stage.name,
+          type: ConnectionLineType.SmoothStep,
+          animated: isActive,
+          style: { 
+            stroke: isActive ? '#F59E0B' : (stage.status === 'SUCCESS' ? '#10B981' : '#334155'),
+            strokeWidth: 2,
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: isActive ? '#F59E0B' : (stage.status === 'SUCCESS' ? '#10B981' : '#334155'),
+          },
+        });
+      }
+    });
+
+    return { nodes: newNodes, edges: newEdges };
+  }, [stages]);
+
+  useEffect(() => {
+    setNodes(initialElements.nodes);
+    setEdges(initialElements.edges);
+  }, [initialElements, setNodes, setEdges]);
+
+  const handleNodeClick = useCallback((_: React.MouseEvent, node: any) => {
+    if (onNodeClick) {
+      onNodeClick(node.id);
+    }
+  }, [onNodeClick]);
+
+  return (
+    <div className="w-full h-full min-h-[300px] bg-[#0D0E12]/50 rounded-2xl border border-white/5 overflow-hidden">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onNodeClick={handleNodeClick}
+        nodeTypes={nodeTypes}
+        fitView
+        selectNodesOnDrag={false}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable={true}
+        zoomOnScroll={false}
+        panOnDrag={true}
+      >
+        <Background color="#334155" gap={20} size={1} />
+        <Controls 
+          className="!bg-[#15171C] !border-white/10 !fill-white" 
+          showInteractive={false}
+        />
+      </ReactFlow>
+      
+      {/* Marching Ants CSS Injection */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .react-flow__edge-path {
+          transition: stroke 0.5s ease;
+        }
+        .react-flow__edge.animated path {
+          stroke-dasharray: 8;
+          animation: dashdraw 0.5s linear infinite;
+        }
+        @keyframes dashdraw {
+          from {
+            stroke-dashoffset: 16;
+          }
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+      `}} />
+    </div>
+  );
+};
+
+export default PipelineWorkflow;

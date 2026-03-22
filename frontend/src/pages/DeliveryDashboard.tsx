@@ -6,13 +6,15 @@ import {
 } from "lucide-react";
 import { Card } from "../components/ui/Card";
 import type { Organization } from "../types/index";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import BuildDetailView from "../components/BuildDetailView";
 
 export default function DeliveryDashboard({ _org, _activeTab }: { _org: Organization | null, _activeTab: string }) {
     const [token] = useState(localStorage.getItem("token") || "");
     const [isLoading, setIsLoading] = useState(false);
     const [builds, setBuilds] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedBuild, setSelectedBuild] = useState<any>(null);
 
     const fetchBuilds = async () => {
         if (!token) return;
@@ -52,7 +54,7 @@ export default function DeliveryDashboard({ _org, _activeTab }: { _org: Organiza
     };
 
     return (
-        <div className="flex flex-col min-h-full w-full bg-[#0A0A0A] p-8 space-y-8 overflow-y-auto">
+        <div className="flex flex-col min-h-full w-full bg-[#0A0A0A] p-8 space-y-8 overflow-y-auto relative">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
@@ -100,10 +102,14 @@ export default function DeliveryDashboard({ _org, _activeTab }: { _org: Organiza
                             </div>
                         ) : (
                             activePipelines.map((pipeline, i) => (
-                                <Card key={i} className="bg-[#111] border-[#222] border-l-yellow-500 border-l-2">
+                                <Card 
+                                    key={i} 
+                                    className="bg-[#111] border-[#222] border-l-yellow-500 border-l-2 cursor-pointer hover:bg-white/[0.02] transition-all group"
+                                    onClick={() => setSelectedBuild(pipeline)}
+                                >
                                     <div className="p-4 space-y-3">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-white truncate max-w-[150px]">{pipeline.applicationName}</span>
+                                            <span className="text-xs font-bold text-white group-hover:text-yellow-400 transition-colors truncate max-w-[150px]">{pipeline.applicationName}</span>
                                             <span className="text-[10px] text-yellow-500 font-bold uppercase animate-pulse">{pipeline.status}</span>
                                         </div>
                                         <div className="h-1 bg-black/40 rounded-full overflow-hidden">
@@ -146,10 +152,14 @@ export default function DeliveryDashboard({ _org, _activeTab }: { _org: Organiza
                                         ? Math.floor((new Date(build.endTime).getTime() - new Date(build.startTime).getTime()) / 1000)
                                         : null;
                                     return (
-                                        <tr key={i} className="hover:bg-white/[0.02] transition-colors group">
+                                        <tr 
+                                            key={i} 
+                                            className="hover:bg-white/[0.04] transition-colors group cursor-pointer"
+                                            onClick={() => setSelectedBuild(build)}
+                                        >
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-[#E3E3E3]">{build.applicationName}</span>
+                                                    <span className="text-sm font-bold text-[#E3E3E3] group-hover:text-blue-400 transition-colors">{build.applicationName}</span>
                                                     <span className="text-[10px] text-[#555] font-mono">#{build.id.substring(0, 8)}</span>
                                                 </div>
                                             </td>
@@ -180,6 +190,17 @@ export default function DeliveryDashboard({ _org, _activeTab }: { _org: Organiza
                     </div>
                 </div>
             </div>
+
+            <AnimatePresence>
+                {selectedBuild && (
+                    <BuildDetailView 
+                        deploymentId={selectedBuild.deploymentId || selectedBuild.id}
+                        appId={selectedBuild.applicationId}
+                        token={token}
+                        onClose={() => setSelectedBuild(null)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }
