@@ -6,6 +6,7 @@ import Register from './Register';
 import OAuthCallback from './OAuthCallback';
 import Dashboard from './Dashboard';
 import Projects from './Projects';
+import JoinOrg from './JoinOrg';
 import Layout from './Layout';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/join/org/:token" element={<JoinOrg />} />
             <Route path="/auth/github/callback" element={<OAuthCallback />} />
 
             {/* Protected Routes wrapped in Layout */}

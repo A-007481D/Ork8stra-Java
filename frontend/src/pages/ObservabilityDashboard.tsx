@@ -119,7 +119,7 @@ function OverviewTab({ token, org, headers }: any) {
 
             let combinedApps: any[] = [], podCount = 0, healthy = 0, restarts = 0, cpuTotal = 0;
             const cpuS: Record<string, number> = {}, memS: Record<string, number> = {};
-            let combinedEvents: any[] = [];
+            const combinedEvents: any[] = [];
 
             for (const p of allProjects) {
                 const [metricsRes, sparklinesRes, eventsRes] = await Promise.all([
@@ -353,7 +353,7 @@ function ClusterInsightsTab({ token, org, headers }: any) {
                 const teams: Team[] = await teamsRes.json();
                 const projPromises = teams.map(t => fetch(`/api/v1/projects?teamId=${t.id}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()));
                 const projects = (await Promise.all(projPromises)).flat() as Project[];
-                let apps: any[] = [];
+                const apps: any[] = [];
                 for (const p of projects) {
                     const mRes = await fetch(`/api/v1/apps/projects/${p.id}/metrics`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null);
                     if (mRes) for (const a of mRes.appBreakdown) apps.push({ ...a, projectName: p.name });
@@ -516,7 +516,7 @@ function ResourceMetricsTab({ token, org, headers }: any) {
                 const teams: Team[] = await teamsRes.json();
                 const projPromises = teams.map(t => fetch(`/api/v1/projects?teamId=${t.id}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()));
                 const projects = (await Promise.all(projPromises)).flat() as Project[];
-                let apps: any[] = [];
+                const apps: any[] = [];
                 for (const p of projects) {
                     const mRes = await fetch(`/api/v1/apps/projects/${p.id}/metrics`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null);
                     if (mRes) for (const a of mRes.appBreakdown) apps.push({ ...a, projectName: p.name });

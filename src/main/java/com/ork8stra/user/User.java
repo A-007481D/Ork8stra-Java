@@ -43,11 +43,19 @@ public class User {
     @Builder.Default
     private Set<PlatformRole> roles = new HashSet<>();
 
+    @Builder.Default
     @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
+    private Instant createdAt = Instant.now();
 
+    @Builder.Default
     @Column(name = "updated_at")
-    private Instant updatedAt;
+    private Instant updatedAt = Instant.now();
+
+    @Column(name = "display_name", length = 100)
+    private String displayName;
+
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
 
     @Column(name = "github_username", length = 100)
     private String githubUsername;

@@ -28,5 +28,6 @@ public class ProjectResponse {
     private String serviceUrl;
     private Instant createdAt;
     private Instant updatedAt;
+    private String teamName;
 
 }

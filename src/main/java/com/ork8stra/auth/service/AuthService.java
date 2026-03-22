@@ -35,6 +35,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final GithubService githubService;
+    private final com.ork8stra.organizationmanagement.OrganizationService organizationService;
 
     @Value("${app.jwt.expiration-ms:86400000}")
     private long jwtExpirationMs;
@@ -58,6 +59,9 @@ public class AuthService {
 
         userRepository.save(user);
         log.info("User registered: {}", user.getUsername());
+
+        // Auto-join to organizations if invitations exist
+        organizationService.autoJoinInvitedUser(user.getEmail(), user.getId());
 
         String rolesString = String.join(",", user.getRoles().stream()
                 .map(Enum::name)
@@ -101,7 +105,12 @@ public class AuthService {
                             .enabled(true)
                             .build();
 
-                    return userRepository.save(newUser);
+                    User savedUser = userRepository.save(newUser);
+                    
+                    // Auto-join to organizations if invitations exist
+                    organizationService.autoJoinInvitedUser(savedUser.getEmail(), savedUser.getId());
+                    
+                    return savedUser;
                 });
 
         if (user.getGithubUsername() == null) {

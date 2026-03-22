@@ -1,15 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Project, Service, Deployment, ViewState, Team, Organization } from "./types/index";
 import {
-    Search, Plus, Bell, ChevronDown, ChevronRight, ChevronLeft, Globe,
-    Layers, LineChart,
-    Box, Filter, List as ListIcon,
-    Terminal, Activity, ArrowUpRight, Server,
-    GitBranch, RefreshCw, Play, Square, RotateCcw,
-    Trash2, ExternalLink, MoreHorizontal,
-    Zap, Shield,
-    Settings, Building2, Database, Layout as LayoutIcon, Cpu, Lock,
-    FileText, BarChart3, Container, Gauge
+    Settings, Search, Bell, Plus, ChevronRight, ChevronDown, 
+    MoreVertical, LogOut, Layout as LayoutIcon, Laptop, Activity, 
+    Terminal, Globe, Shield, Database, Cpu, HardDrive, 
+    Users, Building2, User, HelpCircle, ChevronLeft,
+    FileText, BarChart3, Container, Gauge, Server, Lock, Layers,
+    Box, Filter, List as ListIcon, GitBranch, RefreshCw, 
+    Play, Square, RotateCcw, Zap, LineChart, ArrowUpRight
 } from "lucide-react";
 
 import ServiceCatalogModal from "./components/ServiceCatalogModal";
@@ -27,6 +25,8 @@ import ObservabilityDashboard from "./pages/ObservabilityDashboard";
 import InfrastructureDashboard from "./pages/InfrastructureDashboard";
 import DeliveryDashboard from "./pages/DeliveryDashboard";
 import SecurityDashboard from "./pages/SecurityDashboard";
+import UserProfilePage from "./pages/UserProfilePage";
+import NotificationPanel from "./components/NotificationPanel";
 import { useAuth } from "./contexts/AuthContext";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -245,34 +245,39 @@ const Breadcrumbs = ({ viewState, onNavigate }: { viewState: ViewState, onNaviga
 const ProjectsGrid = ({ projects, onSelect }: { projects: Project[], onSelect: (p: Project) => void }) => (
     <div className="px-6 pb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map(p => (
-                <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    key={p.id}
-                    onClick={() => onSelect(p)}
-                    className="group border border-[#2C2C2C] bg-[#141414] hover:border-[#3A3A3A] hover:bg-[#1A1A1A] rounded-lg p-5 cursor-pointer transition-all relative overflow-hidden shadow-sm hover:shadow-md"
-                >
-                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-0 translate-x-2">
-                        <ChevronRight className="w-4 h-4 text-[#666]" />
-                    </div>
-                    <div className="flex items-start justify-between mb-4">
-                        <div className="w-10 h-10 rounded-md bg-gradient-to-br from-[#262626] to-[#111] border border-white/5 flex items-center justify-center text-[#E3E3E3] font-bold text-sm shadow-inner group-hover:border-[#333] transition-colors">
-                            {p.name.substring(0, 2).toUpperCase()}
-                        </div>
-                    </div>
-                    <h3 className="text-[#E3E3E3] font-medium text-[15px] mb-1 group-hover:text-white transition-colors">{p.name}</h3>
-                    <p className="text-[#666] text-xs mb-6">Updated 2m ago</p>
+            {projects.map(p => {
+                const timeAgo = p.updatedAt ? `${Math.floor((Date.now() - new Date(p.updatedAt).getTime()) / 60000)}m ago` : '2m ago';
 
-                    <div className="flex items-center gap-2 mt-auto border-t border-[#222] pt-3">
-                        <div className="flex -space-x-1.5">
-                            <div className="w-5 h-5 rounded-full bg-[#333] border border-[#141414]" />
-                            <div className="w-5 h-5 rounded-full bg-[#444] border border-[#141414]" />
+                return (
+                    <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        key={p.id}
+                        onClick={() => onSelect(p)}
+                        className="group border border-[#2C2C2C] bg-[#141414] hover:border-[#3A3A3A] hover:bg-[#1A1A1A] rounded-lg p-5 cursor-pointer transition-all relative overflow-hidden shadow-sm hover:shadow-md"
+                    >
+                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-0 translate-x-2">
+                            <ChevronRight className="w-4 h-4 text-[#666]" />
                         </div>
-                        <span className="text-[10px] text-[#666] ml-1">Team</span>
-                    </div>
-                </motion.div>
-            ))}
+                        <div className="flex items-start justify-between mb-4">
+                            <div className="w-10 h-10 rounded-md bg-gradient-to-br from-[#262626] to-[#111] border border-white/5 flex items-center justify-center text-[#E3E3E3] font-bold text-sm shadow-inner group-hover:border-[#333] transition-colors">
+                                {p.name.substring(0, 2).toUpperCase()}
+                            </div>
+                        </div>
+                        <h3 className="text-[#E3E3E3] font-medium text-[15px] mb-1 group-hover:text-white transition-colors">{p.name}</h3>
+                        <p className="text-[#666] text-xs mb-6">Updated {timeAgo}</p>
+
+                        <div className="flex items-center gap-2 mt-auto border-t border-[#222] pt-3">
+                            <div className="flex -space-x-1.5">
+                                <div className="w-5 h-5 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-[8px] text-blue-400 font-bold">
+                                    {(p.teamName || 'T').charAt(0).toUpperCase()}
+                                </div>
+                            </div>
+                            <span className="text-[10px] text-[#666] ml-1 font-medium">{p.teamName || 'No Team'}</span>
+                        </div>
+                    </motion.div>
+                );
+            })}
         </div>
     </div>
 );
@@ -405,7 +410,7 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
     }, [token, service.id]);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         fetchData();
         const interval = setInterval(fetchData, 10000); // Polling every 10s to see if build status changed
         return () => clearInterval(interval);
@@ -780,9 +785,51 @@ export default function Dashboard() {
     const { token, logout } = useAuth();
     const [viewState, setViewState] = useState<ViewState>({ type: 'GLOBAL' });
     const prevViewStateRef = useRef<ViewState>({ type: 'GLOBAL' });
-    const [obsTab, setObsTab] = useState('overview');
-    const [infraTab, setInfraTab] = useState('nodes');
+    const [infraTab, setInfraTab] = useState<'nodes' | 'storage' | 'network' | 'topology'>('nodes');
+    const [obsTab, setObsTab] = useState<'overview' | 'logs' | 'insights' | 'alerts' | 'deployments' | 'resources' | 'nodes' | 'audit' | 'network'>('overview');
     const [viewMode, setViewMode] = useState<'GRID' | 'GRAPH'>('GRID');
+    const [sortBy, setSortBy] = useState<'Name' | 'Date'>('Date');
+    const [filterMode, setFilterMode] = useState<'All' | 'Production' | 'Preview' | 'Live' | 'Failed'>('All');
+    const [userProfile, setUserProfile] = useState<any>(null);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+    const fetchProfile = useCallback(async () => {
+        if (!token) return;
+        try {
+            const res = await fetch('/api/v1/profile', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setUserProfile(data);
+            }
+        } catch (e) {
+            console.error('Failed to fetch profile', e);
+        }
+    }, [token]);
+
+    const fetchUnreadCount = useCallback(async () => {
+        if (!token) return;
+        try {
+            const res = await fetch('/api/v1/notifications/unread-count', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const count = await res.json();
+                setUnreadNotifications(count);
+            }
+        } catch (e) {
+            console.error('Failed to fetch unread count', e);
+        }
+    }, [token]);
+
+    useEffect(() => {
+        fetchProfile();
+        fetchUnreadCount();
+        const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30s
+        return () => clearInterval(interval);
+    }, [fetchProfile, fetchUnreadCount]);
     const [showServiceWizard, setShowServiceWizard] = useState(false);
     const [showProjectModal, setShowProjectModal] = useState(false);
     const [showCreateTeam, setShowCreateTeam] = useState(false);
@@ -804,8 +851,6 @@ export default function Dashboard() {
 
     // Search & Filter State
     const [searchQuery, setSearchQuery] = useState("");
-    const [sortBy, setSortBy] = useState<'Date' | 'Name'>('Date');
-    const [filterMode, setFilterMode] = useState<'All' | 'Production' | 'Preview' | 'Live' | 'Failed'>('All');
 
     // Filtered Data
     const filteredProjects = projects
@@ -1234,16 +1279,22 @@ export default function Dashboard() {
                     )}
                 </div>
 
-                {/* User Profile */}
                 <div className="p-4 border-t border-[#222]">
-                    <div className="flex items-center gap-3 w-full p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors cursor-pointer group">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white ring-2 ring-[#141414] shadow-lg shadow-purple-900/20 group-hover:ring-[#333] transition-all">
-                            JD
+                    <div 
+                        onClick={() => setViewState({ type: 'PROFILE' })}
+                        className="flex items-center gap-3 w-full p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors cursor-pointer group"
+                    >
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white ring-2 ring-[#141414] shadow-lg shadow-purple-900/20 group-hover:ring-[#333] transition-all overflow-hidden">
+                            {userProfile?.avatarUrl ? (
+                                <img src={userProfile.avatarUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                (userProfile?.displayName || userProfile?.username || 'U').substring(0, 2).toUpperCase()
+                            )}
                         </div>
                         {isSidebarOpen && (
                             <div className="flex-1 truncate">
-                                <p className="text-sm font-medium text-[#E3E3E3] truncate">Jane Doe</p>
-                                <p className="text-xs text-[#666] truncate hover:text-red-400 transition-colors cursor-pointer" onClick={logout}>Logout</p>
+                                <p className="text-sm font-medium text-[#E3E3E3] truncate">{userProfile?.displayName || userProfile?.username || 'Loading...'}</p>
+                                <p className="text-xs text-[#666] truncate hover:text-red-400 transition-colors cursor-pointer" onClick={(e) => { e.stopPropagation(); logout(); }}>Logout</p>
                             </div>
                         )}
                     </div>
@@ -1292,6 +1343,16 @@ export default function Dashboard() {
                                 Add Service
                             </Button>
                         )}
+
+                        <button 
+                            onClick={() => setShowNotifications(true)}
+                            className="p-2 hover:bg-[#1A1A1A] rounded-full text-[#666] hover:text-[#E3E3E3] transition-colors relative"
+                        >
+                            <Bell className="w-5 h-5" />
+                            {unreadNotifications > 0 && (
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-purple-500 rounded-full border border-[#0A0A0A]" />
+                            )}
+                        </button>
                     </div>
                 </header>
 
@@ -1353,10 +1414,31 @@ export default function Dashboard() {
                             {viewState.type === 'SERVICE' && (
                                 <ServiceDetail service={viewState.service} project={viewState.project} token={token!} onUpdate={fetchServices} onDelete={handleDeleteComplete} />
                             )}
+
+                            {viewState.type === 'PROFILE' && (
+                                <UserProfilePage profile={userProfile} token={token!} onUpdate={fetchProfile} />
+                            )}
+
+                            {viewState.type === 'NOTIFICATIONS' && (
+                                <div className="p-8 max-w-2xl mx-auto">
+                                    <h2 className="text-2xl font-bold text-white mb-6">Notifications</h2>
+                                    {/* Link to actual panel or list view */}
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
             </div>
+
+            {/* Notification Drawer */}
+            <NotificationPanel 
+                isOpen={showNotifications} 
+                onClose={() => {
+                    setShowNotifications(false);
+                    fetchUnreadCount();
+                }} 
+                token={token!} 
+            />
 
             {/* Modals */}
             <AnimatePresence>

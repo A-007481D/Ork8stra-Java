@@ -3,6 +3,8 @@ export interface User {
     id: string;
     username: string;
     email: string;
+    displayName?: string;
+    avatarUrl?: string;
     roles: string[];
 }
 
@@ -25,6 +27,46 @@ export interface TokenResponse {
     username: string;
 }
 
+// Organization types
+// Organization types
+export type OrgRole = 'ORG_OWNER' | 'ORG_ADMIN' | 'ORG_MEMBER' | 'ORG_VIEWER';
+
+export interface Organization {
+    id: string;
+    name: string;
+    slug: string;
+    ownerId: string;
+    owner_id?: string; // from GOrk8stra
+    createdAt: string;
+    created_at?: string; // from GOrk8stra
+}
+
+export interface OrgMember {
+    id: string;
+    userId: string;
+    username: string;
+    email: string;
+    role: OrgRole;
+    joinedAt: string;
+}
+
+// Team types
+export interface Team {
+    id: string;
+    organization_id: string;
+    name: string;
+    created_at: string;
+}
+
+export interface TeamMember {
+    id: string;
+    userId: string;
+    username: string;
+    email: string;
+    role: string; // "lead", "member", "viewer"
+    joinedAt: string;
+}
+
 // Project types
 export interface Project {
     id: string;
@@ -34,6 +76,8 @@ export interface Project {
     created_at?: string; // from GOrk8stra
     k8sNamespace?: string;
     createdAt?: string;
+    updatedAt?: string;
+    teamName?: string;
 }
 
 export interface CreateProjectRequest {
@@ -60,15 +104,28 @@ export interface CreateApplicationRequest {
     envVars?: Record<string, string>;
 }
 
-// Organization types
-export interface Organization {
+// Notification types
+export type NotificationType = 
+    | 'TEAM_INVITE'
+    | 'MEMBER_ADDED'
+    | 'MEMBER_REMOVED'
+    | 'ROLE_CHANGED'
+    | 'DEPLOY_SUCCESS'
+    | 'DEPLOY_FAILED'
+    | 'BUILD_STARTED'
+    | 'BUILD_COMPLETED'
+    | 'SECURITY_ALERT'
+    | 'SYSTEM_INFO';
+
+export interface Notification {
     id: string;
-    name: string;
-    slug: string;
-    ownerId: string;
-    owner_id?: string; // from GOrk8stra
+    userId: string;
+    orgId?: string;
+    type: NotificationType;
+    title: string;
+    message: string;
+    read: boolean;
     createdAt: string;
-    created_at?: string; // from GOrk8stra
 }
 
 // Build types
@@ -87,11 +144,21 @@ export interface Deployment {
     service_id?: string; // from GOrk8stra
     project_id?: string; // from GOrk8stra
     imageTag: string;
-    status: string; // from GOrk8stra (was 'pending' | 'healthy' | 'unhealthy')
+    status: string; // from GOrk8stra
     createdAt: string;
     created_at?: string; // from GOrk8stra
     commit_hash?: string; // from GOrk8stra
     logs?: string; // from GOrk8stra
+}
+
+// User Profile
+export interface UserProfile extends User {
+    organizations: {
+        id: string;
+        name: string;
+        slug: string;
+        role: string;
+    }[];
 }
 
 // API Response wrapper
@@ -99,13 +166,6 @@ export interface ApiError {
     message: string;
     status: number;
     path?: string;
-}
-
-export interface Team {
-    id: string;
-    organization_id: string;
-    name: string;
-    created_at: string;
 }
 
 export interface Service {
@@ -135,6 +195,8 @@ export type ViewState =
     | { type: 'DELIVERY' }
     | { type: 'SECURITY' }
     | { type: 'ROOT' }
+    | { type: 'NOTIFICATIONS' }
+    | { type: 'PROFILE' }
     | { type: 'PROJECT'; project: Project }
     | { type: 'SERVICE'; service: Service; project: Project }
     | { type: 'SETTINGS'; view: 'MEMBERS' };

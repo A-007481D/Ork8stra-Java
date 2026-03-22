@@ -15,6 +15,10 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final KubernetesClient kubernetesClient;
+    private final com.ork8stra.teammanagement.TeamRepository teamRepository;
+    private final com.ork8stra.audit.AuditLogRepository auditLogRepository;
+    private final com.ork8stra.user.UserRepository userRepository;
+    private final com.ork8stra.auth.security.RbacService rbacService;
 
     @Transactional
     public Project createProject(String name, UUID teamId) {
@@ -35,7 +39,30 @@ public class ProjectService {
                     .warn("Failed to create K8s namespace for project '{}': {}", name, e.getMessage());
         }
 
-        return projectRepository.save(project);
+        Project savedProject = projectRepository.save(project);
+
+        // Record Audit Log
+        try {
+            com.ork8stra.teammanagement.Team team = teamRepository.findById(teamId).orElse(null);
+            if (team != null) {
+                String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+                com.ork8stra.user.User currentUser = userRepository.findByEmailIgnoreCase(email).orElse(null);
+                
+                if (currentUser != null) {
+                    auditLogRepository.save(com.ork8stra.audit.AuditLog.builder()
+                            .userId(currentUser.getId())
+                            .username(currentUser.getUsername())
+                            .organizationId(team.getOrganizationId())
+                            .action("PROJECT_CREATED")
+                            .targetName(name)
+                            .build());
+                }
+            }
+        } catch (Exception e) {
+            // Don't fail project creation if audit logging fails
+        }
+
+        return savedProject;
     }
 
     public List<Project> getProjectsByTeamId(UUID teamId) {

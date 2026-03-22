@@ -49,6 +49,18 @@ public class OrganizationController {
         return ResponseEntity.ok(responses);
     }
 
+    @PostMapping("/join/{token}")
+    public ResponseEntity<OrganizationResponse> joinOrganization(
+            @PathVariable String token,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        com.ork8stra.user.User user = userRepository.findByUsernameIgnoreCase(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Organization org = organizationService.acceptInvitation(token, user.getId());
+        return ResponseEntity.ok(toResponse(org));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOrganization(@PathVariable UUID id) {
         organizationService.deleteOrganization(id);
