@@ -194,6 +194,7 @@ export type ViewState =
     | { type: 'INFRA' }
     | { type: 'DELIVERY' }
     | { type: 'SECURITY' }
+    | { type: 'IAM' }
     | { type: 'ROOT' }
     | { type: 'NOTIFICATIONS' }
     | { type: 'PROFILE' }

@@ -25,6 +25,7 @@ import ObservabilityDashboard from "./pages/ObservabilityDashboard";
 import InfrastructureDashboard from "./pages/InfrastructureDashboard";
 import DeliveryDashboard from "./pages/DeliveryDashboard";
 import SecurityDashboard from "./pages/SecurityDashboard";
+import IAMDashboard from "./pages/IAMDashboard";
 import UserProfilePage from "./pages/UserProfilePage";
 import NotificationPanel from "./components/NotificationPanel";
 import { useAuth } from "./contexts/AuthContext";
@@ -204,6 +205,7 @@ const Breadcrumbs = ({ viewState, onNavigate }: { viewState: ViewState, onNaviga
             case 'INFRA': label = 'Infrastructure Registry'; Icon = Layers; break;
             case 'DELIVERY': label = 'Delivery Center'; Icon = Zap; break;
             case 'SECURITY': label = 'Security Center'; Icon = Shield; break;
+            case 'IAM': label = 'IAM Center'; Icon = Shield; break;
         }
 
         return (
@@ -1194,6 +1196,13 @@ export default function Dashboard() {
                                 <SidebarItem icon={LineChart} label="Observability" active={(viewState.type as string) === 'OBSERVABILITY'} hasSub collapsed={!isSidebarOpen} onClick={() => { prevViewStateRef.current = viewState; setCurrentTeam(null); setObsTab('overview'); setViewState({ type: 'OBSERVABILITY' }); }} />
                                 <SidebarItem icon={Layers} label="Projects" active={viewState.type === 'ROOT' || viewState.type === 'PROJECT' || viewState.type === 'SERVICE'} collapsed={!isSidebarOpen} onClick={() => setViewState({ type: 'ROOT' })} />
                                 <SidebarItem icon={Bell} label="Notifications" collapsed={!isSidebarOpen} onClick={() => {}} />
+                                <SidebarItem 
+                                    icon={Shield} 
+                                    label="IAM Center" 
+                                    active={viewState.type === 'IAM'} 
+                                    collapsed={!isSidebarOpen} 
+                                    onClick={() => setViewState({ type: 'IAM' })} 
+                                />
                             </div>
 
                             {/* Operations Accordion */}
@@ -1377,7 +1386,7 @@ export default function Dashboard() {
                     ) : (
                         <>
                             {/* Toolbar (Only for Lists) */}
-                            {viewState.type !== 'SERVICE' && viewState.type !== 'GLOBAL' && !['OBSERVABILITY', 'INFRA', 'DELIVERY', 'SECURITY'].includes(viewState.type) && (
+                            {viewState.type !== 'SERVICE' && viewState.type !== 'GLOBAL' && !['OBSERVABILITY', 'INFRA', 'DELIVERY', 'SECURITY', 'IAM'].includes(viewState.type) && (
                                 <ViewToolbar
                                     sortBy={sortBy}
                                     onSortToggle={() => setSortBy(s => s === 'Date' ? 'Name' : 'Date')}
@@ -1403,6 +1412,9 @@ export default function Dashboard() {
                             )}
                             {viewState.type === 'SECURITY' && (
                                 <SecurityDashboard _org={currentOrg} _activeTab="summary" />
+                            )}
+                            {viewState.type === 'IAM' && (
+                                <IAMDashboard />
                             )}
                             {viewState.type === 'ROOT' && viewMode === 'GRID' && (
                                 <ProjectsGrid projects={filteredProjects} onSelect={handleProjectSelect} />

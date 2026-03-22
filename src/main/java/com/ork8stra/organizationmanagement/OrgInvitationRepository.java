@@ -13,4 +13,5 @@ public interface OrgInvitationRepository extends JpaRepository<OrgInvitation, UU
     Optional<OrgInvitation> findByEmailAndOrganizationIdAndStatus(String email, UUID organizationId, OrgInvitation.InvitationStatus status);
     List<OrgInvitation> findByOrganizationId(UUID organizationId);
     List<OrgInvitation> findByEmailAndStatus(String email, OrgInvitation.InvitationStatus status);
+    long countByStatus(OrgInvitation.InvitationStatus status);
 }
