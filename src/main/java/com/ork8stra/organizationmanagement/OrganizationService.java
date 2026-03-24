@@ -102,6 +102,16 @@ public class OrganizationService {
         }
         
         orgMemberRepository.deleteByUserIdAndOrganizationId(userId, organizationId);
+
+        // Record Audit Log
+        String username = userRepository.findById(userId).map(com.ork8stra.user.User::getUsername).orElse("Unknown");
+        auditLogRepository.save(com.ork8stra.audit.AuditLog.builder()
+                .userId(userId)
+                .username(username)
+                .organizationId(organizationId)
+                .action("MEMBER_REMOVED")
+                .targetName(username)
+                .build());
     }
 
     @Transactional
@@ -134,7 +144,89 @@ public class OrganizationService {
                 .status(OrgInvitation.InvitationStatus.PENDING)
                 .build();
         
-        return orgInvitationRepository.save(invitation);
+        OrgInvitation savedInvitation = orgInvitationRepository.save(invitation);
+
+        // Record Audit Log (Optional, but good for tracking)
+        auditLogRepository.save(com.ork8stra.audit.AuditLog.builder()
+                .userId(java.util.UUID.fromString("00000000-0000-0000-0000-000000000000")) // System/Admin action
+                .username("System")
+                .organizationId(orgId)
+                .action("INVITATION_SENT")
+                .targetName(email)
+                .details("Role: " + role)
+                .build());
+        
+        return savedInvitation;
+    }
+
+    @Transactional
+    public OrgInvitation requestToJoin(UUID orgId, String email) {
+        // Check if already a member
+        userRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
+            if (orgMemberRepository.existsByUserIdAndOrganizationId(user.getId(), orgId)) {
+                throw new IllegalArgumentException("You are already a member of this organization");
+            }
+        });
+
+        OrgInvitation invitation = OrgInvitation.builder()
+                .organizationId(orgId)
+                .email(email.toLowerCase())
+                .role(OrgRole.ORG_MEMBER) // Default role for requests
+                .token(UUID.randomUUID().toString())
+                .status(OrgInvitation.InvitationStatus.PENDING_APPROVAL)
+                .build();
+        
+        OrgInvitation saved = orgInvitationRepository.save(invitation);
+
+        auditLogRepository.save(com.ork8stra.audit.AuditLog.builder()
+                .userId(java.util.UUID.fromString("00000000-0000-0000-0000-000000000000"))
+                .username("System")
+                .organizationId(orgId)
+                .action("INVITATION_REQUESTED")
+                .targetName(email)
+                .build());
+
+        return saved;
+    }
+
+    @Transactional
+    public OrgInvitation approveInvitation(UUID invitationId) {
+        OrgInvitation invitation = orgInvitationRepository.findById(invitationId)
+                .orElseThrow(() -> new IllegalArgumentException("Invitation not found"));
+
+        if (invitation.getStatus() != OrgInvitation.InvitationStatus.PENDING_APPROVAL) {
+            throw new IllegalStateException("Invitation is not pending approval");
+        }
+
+        invitation.setStatus(OrgInvitation.InvitationStatus.PENDING);
+        OrgInvitation saved = orgInvitationRepository.save(invitation);
+
+        auditLogRepository.save(com.ork8stra.audit.AuditLog.builder()
+                .userId(java.util.UUID.fromString("00000000-0000-0000-0000-000000000000"))
+                .username("System")
+                .organizationId(invitation.getOrganizationId())
+                .action("INVITATION_APPROVED")
+                .targetName(invitation.getEmail())
+                .build());
+
+        return saved;
+    }
+
+    @Transactional
+    public void rejectInvitation(UUID invitationId) {
+        OrgInvitation invitation = orgInvitationRepository.findById(invitationId)
+                .orElseThrow(() -> new IllegalArgumentException("Invitation not found"));
+
+        invitation.setStatus(OrgInvitation.InvitationStatus.REVOKED);
+        orgInvitationRepository.save(invitation);
+
+        auditLogRepository.save(com.ork8stra.audit.AuditLog.builder()
+                .userId(java.util.UUID.fromString("00000000-0000-0000-0000-000000000000"))
+                .username("System")
+                .organizationId(invitation.getOrganizationId())
+                .action("INVITATION_REJECTED")
+                .targetName(invitation.getEmail())
+                .build());
     }
 
     @Transactional

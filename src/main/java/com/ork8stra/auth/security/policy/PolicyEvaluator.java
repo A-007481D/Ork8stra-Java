@@ -16,6 +16,7 @@ import static com.ork8stra.auth.security.policy.IAMPolicyModels.*;
 public class PolicyEvaluator {
 
     private final ObjectMapper objectMapper;
+    private final java.util.Map<String, PolicyDocument> policyCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     public boolean isAllowed(List<String> policyDocuments, String action, String resource) {
         boolean allowed = false;
@@ -24,7 +25,16 @@ public class PolicyEvaluator {
             if (docJson == null || docJson.isBlank()) continue;
 
             try {
-                PolicyDocument doc = objectMapper.readValue(docJson, PolicyDocument.class);
+                PolicyDocument doc = policyCache.computeIfAbsent(docJson, json -> {
+                    try {
+                        return objectMapper.readValue(json, PolicyDocument.class);
+                    } catch (Exception e) {
+                        log.error("Failed to parse policy document JSON: {}", e.getMessage());
+                        return null;
+                    }
+                });
+
+                if (doc == null) continue;
                 
                 for (PolicyStatement statement : doc.getStatement()) {
                     if (matches(statement, action, resource)) {
@@ -37,7 +47,7 @@ public class PolicyEvaluator {
                     }
                 }
             } catch (Exception e) {
-                log.error("Failed to parse policy document: {}", e.getMessage());
+                log.error("Error evaluating policy: {}", e.getMessage());
             }
         }
 

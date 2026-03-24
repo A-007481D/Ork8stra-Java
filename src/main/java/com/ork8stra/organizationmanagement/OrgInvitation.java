@@ -58,6 +58,7 @@ public class OrgInvitation {
 
     public enum InvitationStatus {
         PENDING,
+        PENDING_APPROVAL,
         ACCEPTED,
         EXPIRED,
         REVOKED

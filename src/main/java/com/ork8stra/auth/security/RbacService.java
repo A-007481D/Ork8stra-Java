@@ -1,8 +1,14 @@
 package com.ork8stra.auth.security;
 
+import com.ork8stra.applicationmanagement.Application;
+import com.ork8stra.applicationmanagement.ApplicationRepository;
 import com.ork8stra.auth.security.policy.PolicyEvaluator;
 import com.ork8stra.organizationmanagement.*;
+import com.ork8stra.projectmanagement.Project;
+import com.ork8stra.projectmanagement.ProjectRepository;
+import com.ork8stra.teammanagement.Team;
 import com.ork8stra.teammanagement.TeamMemberRepository;
+import com.ork8stra.teammanagement.TeamRepository;
 import com.ork8stra.user.User;
 import com.ork8stra.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +28,9 @@ public class RbacService {
     private final UserRepository userRepository;
     private final OrgPolicyRepository orgPolicyRepository;
     private final OrganizationRepository organizationRepository;
+    private final ProjectRepository projectRepository;
+    private final TeamRepository teamRepository;
+    private final ApplicationRepository applicationRepository;
     private final PolicyEvaluator policyEvaluator;
 
     public boolean hasOrgRole(UUID orgId, String minRole) {
@@ -116,9 +125,24 @@ public class RbacService {
     }
 
     public boolean hasProjectPermission(UUID projectId, String action) {
-        // Implementation would fetch project -> teamId -> orgId and call:
-        // hasPermission(orgId, teamId, action, "arn:kubelite:project:" + projectId)
-        return false; 
+        Optional<Project> project = projectRepository.findById(projectId);
+        if (project.isEmpty()) {
+            return false;
+        }
+
+        UUID teamId = project.get().getTeamId();
+        if (teamId == null) return false;
+
+        Optional<Team> team = teamRepository.findById(teamId);
+        if (team.isEmpty()) return false;
+
+        return hasPermission(team.get().getOrganizationId(), teamId, action, "arn:kubelite:project:" + projectId);
+    }
+
+    public boolean hasApplicationPermission(UUID applicationId, String action) {
+        Optional<Application> app = applicationRepository.findById(applicationId);
+        if (app.isEmpty()) return false;
+        return hasProjectPermission(app.get().getProjectId(), action);
     }
 
     private User getCurrentUser() {

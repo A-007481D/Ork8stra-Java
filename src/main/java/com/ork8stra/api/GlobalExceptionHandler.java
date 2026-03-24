@@ -1,8 +1,11 @@
 package com.ork8stra.api;
 
 import com.ork8stra.api.dto.ErrorResponse;
+import com.ork8stra.common.PlatformException;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -74,6 +77,39 @@ public class GlobalExceptionHandler {
                                 .status(401)
                                 .error("Unauthorized")
                                 .message("Invalid username or password")
+                                .path(request.getRequestURI())
+                                .build());
+        }
+
+        @ExceptionHandler(PlatformException.class)
+        public ResponseEntity<ErrorResponse> handlePlatformException(PlatformException ex, HttpServletRequest request) {
+                log.error("Platform error on '{}': {} (Code: {})", request.getRequestURI(), ex.getMessage(), ex.getErrorCode());
+                return ResponseEntity.status(ex.getStatus()).body(ErrorResponse.builder()
+                                .status(ex.getStatus().value())
+                                .error(ex.getErrorCode())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build());
+        }
+
+        @ExceptionHandler(KubernetesClientException.class)
+        public ResponseEntity<ErrorResponse> handleK8sException(KubernetesClientException ex, HttpServletRequest request) {
+                log.error("Kubernetes error on '{}': {}", request.getRequestURI(), ex.getMessage());
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ErrorResponse.builder()
+                                .status(503)
+                                .error("KUBERNETES_ERROR")
+                                .message("Failed to communicate with the cluster: " + ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build());
+        }
+
+        @ExceptionHandler(DataAccessException.class)
+        public ResponseEntity<ErrorResponse> handleDataAccessException(DataAccessException ex, HttpServletRequest request) {
+                log.error("Database error on '{}'", request.getRequestURI(), ex);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ErrorResponse.builder()
+                                .status(500)
+                                .error("DATABASE_ERROR")
+                                .message("A database error occurred")
                                 .path(request.getRequestURI())
                                 .build());
         }

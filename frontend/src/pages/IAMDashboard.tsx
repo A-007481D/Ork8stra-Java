@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Shield, Users, Key, Activity, Search, 
   ChevronRight, Building2, Clock, Filter,
-  ShieldCheck, ShieldAlert, Zap, Lock
+  ShieldCheck, ShieldAlert, Zap, Lock,
+  CheckCircle, XCircle, UserPlus
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -67,13 +68,24 @@ interface AuditLog {
   createdAt: string;
 }
 
+interface OrgInvitation {
+  id: string;
+  organizationId: string;
+  email: string;
+  role: string;
+  status: 'PENDING' | 'PENDING_APPROVAL' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
+  createdAt: string;
+  expiresAt: string;
+}
+
 const IAMDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'teams' | 'policies' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'teams' | 'policies' | 'audit' | 'invitations'>('overview');
   const [summary, setSummary] = useState<IAMSummary | null>(null);
   const [users, setUsers] = useState<UserIdentity[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [invitations, setInvitations] = useState<OrgInvitation[]>([]);
   
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -90,38 +102,65 @@ const IAMDashboard: React.FC = () => {
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     try {
       if (activeTab === 'overview' || !summary) {
         const res = await fetch('/api/v1/iam/summary');
         if (res.ok) setSummary(await res.json());
-        else if (res.status === 403) setError('Access Denied: Platform Admin required.');
+        else if (res.status === 403) {
+          setError('Access Denied: You do not have the Platform Admin privileges required to view global IAM telemetry.');
+          setLoading(false);
+          return;
+        }
       }
       
-      if (activeTab === 'users') {
-        const res = await fetch('/api/v1/iam/users');
-        if (res.ok) setUsers(await res.json());
-      }
+      const endpoints: Record<string, string> = {
+        users: '/api/v1/iam/users',
+        policies: '/api/v1/iam/policies',
+        teams: '/api/v1/iam/teams',
+        audit: '/api/v1/iam/audit-logs',
+        invitations: '/api/v1/iam/invitations'
+      };
 
-      if (activeTab === 'policies') {
-        const res = await fetch('/api/v1/iam/policies');
-        if (res.ok) setPolicies(await res.json());
-      }
-
-      if (activeTab === 'teams') {
-        const res = await fetch('/api/v1/iam/teams');
-        if (res.ok) setTeams(await res.json());
-      }
-
-      if (activeTab === 'audit') {
-        const res = await fetch('/api/v1/iam/audit-logs');
-        if (res.ok) setAuditLogs(await res.json());
+      if (endpoints[activeTab]) {
+        const res = await fetch(endpoints[activeTab]);
+        if (res.ok) {
+          const data = await res.json();
+          if (activeTab === 'users') setUsers(data);
+          if (activeTab === 'policies') setPolicies(data);
+          if (activeTab === 'teams') setTeams(data);
+          if (activeTab === 'audit') setAuditLogs(data);
+          if (activeTab === 'invitations') setInvitations(data);
+        } else if (res.status === 403) {
+          setError('Access Denied: This administrative module requires Platform Admin clearance.');
+        }
       }
       
     } catch (err) {
       console.error('Failed to fetch IAM data:', err);
-      setError('Failed to load IAM Center data. The platform might be restarting to apply security updates.');
+      setError('Platform synchronization failed. The security engine may be undergoing maintenance.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApproveInvite = async (orgId: string, inviteId: string) => {
+    try {
+      const res = await fetch(`/api/v1/organizations/${orgId}/invitations/${inviteId}/approve`, { method: 'POST' });
+      if (res.ok) fetchData();
+      else alert('Failed to approve invitation.');
+    } catch (err) {
+      console.error('Approval error:', err);
+    }
+  };
+
+  const handleRejectInvite = async (orgId: string, inviteId: string) => {
+    try {
+      const res = await fetch(`/api/v1/organizations/${orgId}/invitations/${inviteId}/reject`, { method: 'POST' });
+      if (res.ok) fetchData();
+      else alert('Failed to reject invitation.');
+    } catch (err) {
+      console.error('Rejection error:', err);
     }
   };
 
@@ -129,6 +168,7 @@ const IAMDashboard: React.FC = () => {
     try {
       const res = await fetch(`/api/v1/teams/${teamId}/members`);
       if (res.ok) setTeamMembers(await res.json());
+      else if (res.status === 403) setError('Permission Denied: Insufficient privileges to view team membership.');
     } catch (err) {
       console.error('Failed to fetch team members:', err);
     }
@@ -140,6 +180,7 @@ const IAMDashboard: React.FC = () => {
         method: 'POST'
       });
       if (res.ok) fetchTeamMembers(teamId);
+      else if (res.status === 403) alert('Security Violation: You do not have permission to modify policy attachments.');
     } catch (err) {
       console.error('Failed to attach policy:', err);
     }
@@ -151,6 +192,7 @@ const IAMDashboard: React.FC = () => {
         method: 'DELETE'
       });
       if (res.ok) fetchTeamMembers(teamId);
+      else if (res.status === 403) alert('Security Violation: You do not have permission to revoke policy attachments.');
     } catch (err) {
       console.error('Failed to detach policy:', err);
     }
@@ -171,6 +213,8 @@ const IAMDashboard: React.FC = () => {
       if (res.ok) {
         setEditingPolicy(null);
         fetchData();
+      } else if (res.status === 403) {
+        alert('Security Violation: Policy modification failed due to insufficient administrative clearance.');
       }
     } catch (err) {
       console.error('Failed to save policy:', err);
@@ -182,15 +226,119 @@ const IAMDashboard: React.FC = () => {
     { id: 'users', label: 'Identity Hub', icon: Users },
     { id: 'teams', label: 'Teams & Groups', icon: ShieldCheck },
     { id: 'policies', label: 'Policy Templates', icon: Key },
+    { id: 'invitations', label: 'Invitations', icon: UserPlus },
     { id: 'audit', label: 'Security Audit', icon: Activity },
   ] as const;
 
-  if (loading && !summary && users.length === 0 && policies.length === 0 && auditLogs.length === 0) {
+  const renderInvitations = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold text-white">Organization Join Requests & Invites</h2>
+          <p className="text-[#666] text-sm mt-1">Review and approve pending organization invitations and join requests.</p>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline" className="border-[#333] text-[#999] gap-2">
+            <Filter className="w-4 h-4" /> Filter
+          </Button>
+        </div>
+      </div>
+
+      <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-[#1a1a1a] border-b border-[#222]">
+            <tr>
+              <th className="px-6 py-4 text-[#666] font-medium text-xs uppercase tracking-wider">Target Email</th>
+              <th className="px-6 py-4 text-[#666] font-medium text-xs uppercase tracking-wider">Organization ID</th>
+              <th className="px-6 py-4 text-[#666] font-medium text-xs uppercase tracking-wider">Role</th>
+              <th className="px-6 py-4 text-[#666] font-medium text-xs uppercase tracking-wider">Status</th>
+              <th className="px-6 py-4 text-[#666] font-medium text-xs uppercase tracking-wider text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#222]">
+            {invitations.map((invite) => (
+              <tr key={invite.id} className="hover:bg-white/[0.02] transition-colors">
+                <td className="px-6 py-4">
+                  <span className="text-white font-medium">{invite.email}</span>
+                </td>
+                <td className="px-6 py-4">
+                  <span className="text-[#666] text-sm tabular-nums">{invite.organizationId}</span>
+                </td>
+                <td className="px-6 py-4">
+                  <Badge variant="outline" className="border-purple-500/30 text-purple-400 capitalize">
+                    {invite.role.replace('ORG_', '').toLowerCase()}
+                  </Badge>
+                </td>
+                <td className="px-6 py-4">
+                  <Badge 
+                    variant="outline" 
+                    className={
+                      invite.status === 'PENDING_APPROVAL' ? "border-yellow-500/30 text-yellow-500" :
+                      invite.status === 'PENDING' ? "border-blue-500/30 text-blue-500" :
+                      invite.status === 'ACCEPTED' ? "border-green-500/30 text-green-500" :
+                      "border-red-500/30 text-red-500"
+                    }
+                  >
+                    {invite.status.replace('_', ' ')}
+                  </Badge>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <div className="flex justify-end gap-2">
+                    {invite.status === 'PENDING_APPROVAL' && (
+                      <>
+                        <Button 
+                          onClick={() => handleApproveInvite(invite.organizationId, invite.id)}
+                          size="sm" 
+                          className="bg-green-600 hover:bg-green-700 text-white gap-1.5"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" /> Approve
+                        </Button>
+                        <Button 
+                          onClick={() => handleRejectInvite(invite.organizationId, invite.id)}
+                          size="sm" 
+                          variant="outline" 
+                          className="border-red-500/30 text-red-500 hover:bg-red-500/10 gap-1.5"
+                        >
+                          <XCircle className="w-3.5 h-3.5" /> Reject
+                        </Button>
+                      </>
+                    )}
+                    {invite.status === 'PENDING' && (
+                      <Button 
+                        onClick={() => handleRejectInvite(invite.organizationId, invite.id)}
+                        size="sm" 
+                        variant="outline" 
+                        className="border-[#333] text-[#666] hover:text-white"
+                      >
+                        Revoke
+                      </Button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {invitations.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-6 py-12 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <Zap className="w-8 h-8 text-[#222]" />
+                    <p className="text-[#444] font-medium">No pending security invitations found.</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  if (loading && !summary && users.length === 0 && policies.length === 0 && auditLogs.length === 0 && invitations.length === 0 && !error) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
-          <p className="text-[#666] animate-pulse">Synchronizing Platform Integrity...</p>
+          <p className="text-[#666] animate-pulse font-medium">Validating Security Credentials...</p>
         </div>
       </div>
     );
@@ -198,15 +346,31 @@ const IAMDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[400px]">
-        <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-lg max-w-md text-center">
-          <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Security Override Required</h2>
-          <p className="text-[#999] mb-4">{error}</p>
-          <Button onClick={fetchData} variant="outline" className="border-red-500/50 text-red-500 hover:bg-red-500/10">
-            Re-verify Permissions
-          </Button>
-        </div>
+      <div className="p-8 flex items-center justify-center min-h-[500px]">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-[#141414] border border-red-500/20 p-8 rounded-xl max-w-lg text-center shadow-2xl relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-red-500/5 pointer-events-none" />
+          <div className="relative z-10">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ShieldAlert className="w-8 h-8 text-red-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-3">Security Access Denied</h2>
+            <p className="text-[#888] mb-8 leading-relaxed">
+              {error}
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button onClick={() => window.location.href = '/'} className="bg-white text-black hover:bg-[#ddd]">
+                Return to Dashboard
+              </Button>
+              <Button onClick={fetchData} variant="outline" className="border-[#333] text-[#666] hover:text-white hover:border-[#444]">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -564,6 +728,8 @@ const IAMDashboard: React.FC = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'invitations' && renderInvitations()}
 
           {activeTab === 'audit' && (
             <div className="space-y-6">

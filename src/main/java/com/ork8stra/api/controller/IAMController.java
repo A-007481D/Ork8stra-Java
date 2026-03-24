@@ -29,7 +29,7 @@ public class IAMController {
     private final com.ork8stra.teammanagement.TeamRepository teamRepository;
 
     @GetMapping("/summary")
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("hasRole('ADMIN')")
  // Only global admins can see the full IAM summary
     public ResponseEntity<IAMSummaryResponse> getSummary() {
         return ResponseEntity.ok(IAMSummaryResponse.builder()
@@ -42,7 +42,7 @@ public class IAMController {
     }
 
     @GetMapping("/users")
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserIdentityResponse>> listUsers() {
         List<UserIdentityResponse> users = userRepository.findAll().stream()
                 .map(user -> {
@@ -85,20 +85,26 @@ public class IAMController {
     }
 
     @GetMapping("/policies")
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<OrgPolicy>> listGlobalPolicies() {
         return ResponseEntity.ok(orgPolicyRepository.findAll());
     }
 
     @GetMapping("/audit-logs")
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<com.ork8stra.audit.AuditLog>> listAuditLogs() {
         return ResponseEntity.ok(auditLogRepository.findAllByOrderByCreatedAtDesc());
     }
 
     @GetMapping("/teams")
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<com.ork8stra.teammanagement.Team>> listAllTeams() {
         return ResponseEntity.ok(teamRepository.findAll());
+    }
+
+    @GetMapping("/invitations")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<OrgInvitation>> listAllInvitations() {
+        return ResponseEntity.ok(orgInvitationRepository.findAll());
     }
 }

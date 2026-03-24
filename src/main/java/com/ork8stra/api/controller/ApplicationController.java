@@ -8,11 +8,17 @@ import com.ork8stra.deploymentengine.Deployment;
 import com.ork8stra.deploymentengine.DeploymentService;
 import com.ork8stra.projectmanagement.Project;
 import com.ork8stra.projectmanagement.ProjectService;
+import com.ork8stra.audit.AuditLog;
+import com.ork8stra.audit.AuditLogRepository;
+import com.ork8stra.user.UserRepository;
+import com.ork8stra.user.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,7 +35,11 @@ public class ApplicationController {
     private final ProjectService projectService;
     private final DeploymentService deploymentService;
     private final com.ork8stra.deploymentengine.DeploymentRepository deploymentRepository;
+    private final AuditLogRepository auditLogRepository;
+    private final UserRepository userRepository;
+    private final com.ork8stra.teammanagement.TeamRepository teamRepository;
 
+    @PreAuthorize("@rbacService.hasProjectPermission(#projectId, 'project:create_app')")
     @PostMapping("/projects/{projectId}/apps")
     public ResponseEntity<ApplicationResponse> createApplication(
             @PathVariable UUID projectId,
@@ -46,9 +56,11 @@ public class ApplicationController {
                 request.getContainerPort(),
                 request.getEnvVars());
 
+        auditAction(projectId, "APP_CREATED", app.getName(), "ID: " + app.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(app));
     }
 
+    @PreAuthorize("@rbacService.hasProjectPermission(#projectId, 'project:view')")
     @GetMapping("/projects/{projectId}/apps")
     public ResponseEntity<List<ApplicationResponse>> listApplicationsByProject(@PathVariable UUID projectId) {
         List<ApplicationResponse> apps = applicationService.getApplicationsByProject(projectId).stream()
@@ -57,12 +69,14 @@ public class ApplicationController {
         return ResponseEntity.ok(apps);
     }
 
+    @PreAuthorize("@rbacService.hasApplicationPermission(#id, 'service:view')")
     @GetMapping("/apps/{id}")
     public ResponseEntity<ApplicationResponse> getApplication(@PathVariable UUID id) {
         Application app = applicationService.getApplication(id);
         return ResponseEntity.ok(toResponse(app));
     }
 
+    @PreAuthorize("@rbacService.hasApplicationPermission(#id, 'service:manage')")
     @PutMapping("/apps/{id}")
     public ResponseEntity<ApplicationResponse> updateApplication(
             @PathVariable UUID id,
@@ -73,33 +87,48 @@ public class ApplicationController {
         return ResponseEntity.ok(toResponse(updated));
     }
 
+    @PreAuthorize("@rbacService.hasApplicationPermission(#id, 'service:delete')")
     @DeleteMapping("/apps/{id}")
     public ResponseEntity<Void> deleteApplication(@PathVariable UUID id) {
+        Application app = applicationService.getApplication(id);
+        UUID projectId = app.getProjectId();
+        String appName = app.getName();
+        
         applicationService.deleteApplication(id);
+        auditAction(projectId, "APP_DELETED", appName, "ID: " + id);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("@rbacService.hasApplicationPermission(#id, 'service:manage')")
     @PostMapping("/apps/{id}/stop")
     public ResponseEntity<Void> stopApplication(@PathVariable UUID id) {
         Application app = applicationService.getApplication(id);
         Project project = projectService.getProjectById(app.getProjectId());
         deploymentService.stopApplication(app, project);
+        
+        auditAction(project.getId(), "APP_STOP", app.getName(), null);
         return ResponseEntity.accepted().build();
     }
 
+    @PreAuthorize("@rbacService.hasApplicationPermission(#id, 'service:manage')")
     @PostMapping("/apps/{id}/start")
     public ResponseEntity<Void> startApplication(@PathVariable UUID id) {
         Application app = applicationService.getApplication(id);
         Project project = projectService.getProjectById(app.getProjectId());
         deploymentService.startApplication(app, project);
+        
+        auditAction(project.getId(), "APP_START", app.getName(), null);
         return ResponseEntity.accepted().build();
     }
 
+    @PreAuthorize("@rbacService.hasApplicationPermission(#id, 'service:manage')")
     @PostMapping("/apps/{id}/restart")
     public ResponseEntity<Void> restartApplication(@PathVariable UUID id) {
         Application app = applicationService.getApplication(id);
         Project project = projectService.getProjectById(app.getProjectId());
         deploymentService.restartApplication(app, project);
+        
+        auditAction(project.getId(), "APP_RESTART", app.getName(), null);
         return ResponseEntity.accepted().build();
     }
 
@@ -120,5 +149,30 @@ public class ApplicationController {
                 .deploymentStatus(latestDeployment.map(d -> d.getStatus().name()).orElse(null))
                 .envVars(app.getEnvVars())
                 .build();
+    }
+
+    private void auditAction(UUID projectId, String action, String targetName, String details) {
+        try {
+            Project project = projectService.getProjectById(projectId);
+            com.ork8stra.teammanagement.Team team = teamRepository.findById(project.getTeamId()).orElse(null);
+            
+            if (team != null) {
+                String email = SecurityContextHolder.getContext().getAuthentication().getName();
+                User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
+                
+                if (user != null) {
+                    auditLogRepository.save(AuditLog.builder()
+                            .userId(user.getId())
+                            .username(user.getUsername())
+                            .organizationId(team.getOrganizationId())
+                            .action(action)
+                            .targetName(targetName)
+                            .details(details)
+                            .build());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to record audit log for action {}: {}", action, e.getMessage());
+        }
     }
 }

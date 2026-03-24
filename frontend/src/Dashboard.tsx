@@ -360,8 +360,8 @@ const ServicesGrid = ({ services, loading, onSelect, onAdd }: { services: Servic
 
 const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { service: Service, project: Project, token: string, onUpdate: () => void, onDelete: () => void }) => {
     const [logs, setLogs] = useState<string[]>([]);
-    const [currentDeployment, setCurrentDeployment] = useState<Deployment | null>(null);
-    const [deployments, setDeployments] = useState<Deployment[]>([]);
+    const [selectedBuild, setSelectedBuild] = useState<any | null>(null);
+    const [buildHistory, setBuildHistory] = useState<any[]>([]);
     const [runtimeStatus, setRuntimeStatus] = useState<Service['status']>(service.status || 'building');
     const [liveUrl, setLiveUrl] = useState<string | null>(service.live_url || null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -405,10 +405,10 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                 }));
 
                 mappedBuilds.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-                setDeployments(mappedBuilds);
+                setBuildHistory(mappedBuilds);
 
                 if (mappedBuilds.length > 0) {
-                    setCurrentDeployment(prev => {
+                    setSelectedBuild((prev: any) => {
                         if (!prev) return mappedBuilds[0];
                         const updated = mappedBuilds.find((b: any) => b.id === prev.id);
                         return updated || mappedBuilds[0];
@@ -435,11 +435,11 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
     }, [fetchData]);
 
     useEffect(() => {
-        if (!currentDeployment || !service) return;
+        if (!selectedBuild || !service) return;
 
         setLogs([]);
 
-        const url = `/api/v1/apps/${service.id}/build/${currentDeployment.id}/logs`;
+        const url = `/api/v1/apps/${service.id}/build/${selectedBuild.id}/logs`;
         const eventSource = new EventSource(url);
 
         const appendLog = (line: string) => {
@@ -469,7 +469,7 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
         return () => {
             eventSource.close();
         };
-    }, [currentDeployment?.id, service?.id, fetchData]);
+    }, [selectedBuild?.id, service?.id, fetchData]);
 
     const handleRedeploy = async () => {
         if (!token) return;
@@ -492,8 +492,8 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                     logs: '',
                     commit_hash: ''
                 };
-                setDeployments(prev => [newDeployment, ...prev]);
-                setCurrentDeployment(newDeployment);
+                setBuildHistory(prev => [newDeployment, ...prev]);
+                setSelectedBuild(newDeployment);
                 fetchData();
             } else {
                 console.error("Deploy failed with status:", res.status);
@@ -561,15 +561,15 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                 <div className="flex items-center gap-4">
                     <div className="flex flex-col">
                         <span className="text-[10px] uppercase tracking-wider text-[#666] font-semibold mb-0.5">Status</span>
-                        <Badge variant={runtimeStatus === 'live' ? 'live' : 'secondary'} className="text-xs px-2 py-1 uppercase tracking-wider">
-                            {runtimeStatus || currentDeployment?.status || "NO DEPLOYMENTS"}
+                        <Badge variant={runtimeStatus === 'live' ? 'live' : runtimeStatus === 'failed' ? 'failed' : 'secondary'} className="text-xs px-2 py-1 uppercase tracking-wider">
+                            {runtimeStatus || "INITIALIZING..."}
                         </Badge>
                     </div>
                     <div className="h-6 w-[1px] bg-[#222]" />
                     <div className="flex flex-col">
                         <span className="text-[10px] uppercase tracking-wider text-[#666] font-semibold mb-0.5">Commit</span>
                         <span className="text-xs text-[#999] font-mono">
-                            {currentDeployment?.commit_hash?.substring(0, 7) || '---'}
+                            {selectedBuild?.commit_hash?.substring(0, 7) || '---'}
                         </span>
                     </div>
                     <div className="h-6 w-[1px] bg-[#222]" />
@@ -592,12 +592,12 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                     <Button
                         size="sm"
                         variant="secondary"
-                        disabled={currentDeployment?.status === 'building'}
+                        disabled={selectedBuild?.status === 'building'}
                         onClick={handleRedeploy}
                         title="Build new image and deploy it"
                         className="bg-[#222] border-[#333] hover:bg-[#333] text-[#CCC]"
                     >
-                        {currentDeployment?.status === 'building' ? <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-2" />}
+                        {selectedBuild?.status === 'building' ? <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-2" />}
                         Build & Deploy
                     </Button>
                     <Button
@@ -647,7 +647,7 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                             <Terminal className="w-3.5 h-3.5" />
                             <span>build_output.log</span>
                         </div>
-                        {currentDeployment?.status === 'building' && (
+                        {selectedBuild?.status === 'building' && (
                             <span className="text-[10px] text-amber-500 animate-pulse flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                                 STREAMING
@@ -679,15 +679,15 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                             <CardTitle className="text-xs font-medium text-[#888] uppercase tracking-wider">Deployment History</CardTitle>
                         </CardHeader>
                         <div className="flex-1 overflow-y-auto p-0">
-                            {deployments.map(d => (
+                            {buildHistory.map(d => (
                                 <div
                                     key={d.id}
-                                    onClick={() => setCurrentDeployment(d)}
-                                    className={`px-4 py-3 border-b border-[#1A1A1A] transition-colors flex items-center justify-between group cursor-pointer ${currentDeployment?.id === d.id ? 'bg-[#1A1A1A]' : 'hover:bg-[#151515]'}`}
+                                    onClick={() => setSelectedBuild(d)}
+                                    className={`px-4 py-3 border-b border-[#1A1A1A] transition-colors flex items-center justify-between group cursor-pointer ${selectedBuild?.id === d.id ? 'bg-[#1A1A1A]' : 'hover:bg-[#151515]'}`}
                                 >
                                     <div className="flex flex-col gap-1">
                                         <div className="flex items-center gap-2">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${d.status === 'live' ? 'bg-emerald-500' :
+                                            <div className={`w-1.5 h-1.5 rounded-full ${d.status === 'success' ? 'bg-emerald-500' :
                                                 d.status === 'failed' ? 'bg-red-500' :
                                                     d.status === 'building' ? 'bg-amber-500' : 'bg-slate-700'
                                                 }`} />

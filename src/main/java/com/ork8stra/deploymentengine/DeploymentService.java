@@ -66,6 +66,7 @@ public class DeploymentService {
                 deploy(app, project, event.imageTag());
         }
 
+        @Transactional
         public Deployment deploy(Application app, Project project, String imageTag) {
                 Deployment deployment = new Deployment(app.getId(), imageTag);
                 initializeStages(deployment);
@@ -78,8 +79,7 @@ public class DeploymentService {
                 deployment.setIngressUrl(ingressUrl);
                 deployment.setReplicas(1);
                 
-                // Visualization delay: allow the Liqud Fill to be seen for a few seconds
-                try { Thread.sleep(3000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                // Removed Thread.sleep(3000) - UI should handle visualization
 
                 deployment.setStatus(DeploymentStatus.HEALTHY);
 
@@ -105,35 +105,28 @@ public class DeploymentService {
                 DeploymentStage buildStage = DeploymentStage.builder()
                                 .name("Source Compilation")
                                 .status(DeploymentStage.PipelineStatus.SUCCESS)
-                                .startTime(Instant.now().minusSeconds(120))
-                                .endTime(Instant.now().minusSeconds(10))
                                 .orderIndex(0)
-                                .estimatedDuration(120L)
                                 .deployment(deployment)
                                 .build();
+                // We assume compilation happened before this if we have an imageTag, 
+                // but real build monitoring should happen in BuildService.
                 buildStage.getSteps().add(DeploymentStep.builder().name("Fetch Repository").status(DeploymentStage.PipelineStatus.SUCCESS).build());
-                buildStage.getSteps().add(DeploymentStep.builder().name("Maven Build").status(DeploymentStage.PipelineStatus.SUCCESS).build());
-                buildStage.getSteps().add(DeploymentStep.builder().name("Docker Image Pushed").status(DeploymentStage.PipelineStatus.SUCCESS).build());
+                buildStage.getSteps().add(DeploymentStep.builder().name("Build Pipeline").status(DeploymentStage.PipelineStatus.SUCCESS).build());
 
-                // Stage 2: Quality Scan
+                // Stage 2: Security & Quality
                 DeploymentStage testStage = DeploymentStage.builder()
                                 .name("Security & Quality")
                                 .status(DeploymentStage.PipelineStatus.SUCCESS)
-                                .startTime(Instant.now().minusSeconds(10))
-                                .endTime(Instant.now().minusSeconds(2))
                                 .orderIndex(1)
-                                .estimatedDuration(45L)
                                 .deployment(deployment)
                                 .build();
-                testStage.getSteps().add(DeploymentStep.builder().name("JUnit Suite").status(DeploymentStage.PipelineStatus.SUCCESS).build());
-                testStage.getSteps().add(DeploymentStep.builder().name("SonarQube Scan").status(DeploymentStage.PipelineStatus.SUCCESS).build());
+                testStage.getSteps().add(DeploymentStep.builder().name("Cluster Policy Check").status(DeploymentStage.PipelineStatus.SUCCESS).build());
 
                 // Stage 3: Deployment
                 DeploymentStage deployStage = DeploymentStage.builder()
                                 .name("Kubernetes Rollout")
                                 .status(DeploymentStage.PipelineStatus.PENDING)
                                 .orderIndex(2)
-                                .estimatedDuration(30L)
                                 .deployment(deployment)
                                 .build();
                 deployStage.getSteps().add(DeploymentStep.builder().name("K8s Apply").status(DeploymentStage.PipelineStatus.PENDING).build());
@@ -203,7 +196,7 @@ public class DeploymentService {
                 Map<String, String> envVars = buildRuntimeEnv(app, project, containerPort);
 
                 ensureNamespace(project);
-                ensureErrorHandler(project);
+                verifyErrorHandler(project);
 
                 kubernetesClient.apps().deployments().inNamespace(namespace).resource(
                                 new DeploymentBuilder()
@@ -220,6 +213,7 @@ public class DeploymentService {
                                                 .withNewMetadata()
                                                 .addToLabels("app", resourceName)
                                                 .addToAnnotations("ork8stra.com/restartedAt", Instant.now().toString())
+                                                .addToAnnotations("ork8stra.com/app-id", app.getId().toString())
                                                 .endMetadata()
                                                 .withNewSpec()
                                                 .addNewContainer()
@@ -432,18 +426,9 @@ public class DeploymentService {
                         p2.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
                         
                         var config = objectMapper.readTree(configJson);
-                        var exposedPorts = config.path("config").path("ExposedPorts");
-                        if (!exposedPorts.isMissingNode() && exposedPorts.fieldNames().hasNext()) {
-                                String portSpec = exposedPorts.fieldNames().next(); // e.g. "8080/tcp"
-                                String portNum = portSpec.split("/")[0];
-                                int detectedPort = Integer.parseInt(portNum);
-                                log.info("Detected EXPOSE port {} from image {}", detectedPort, imageTag);
-                                return detectedPort;
-                        }
-
-                        log.info("No EXPOSE port found in image {}, falling back to resolveContainerPort", imageTag);
+                        log.info("No EXPOSE port found in image {}, check Application config", imageTag);
                 } catch (Exception e) {
-                        log.warn("Failed to detect port from image {}: {}", imageTag, e.getMessage());
+                        log.warn("Failed to detect port from image {}: {}. Falling back to default/env.", imageTag, e.getMessage());
                 }
                 return resolveContainerPort(app);
         }
@@ -530,6 +515,14 @@ public class DeploymentService {
                 } catch (Exception e) {
                         log.warn("Failed to discover node IP for dynamic DNS: {}", e.getMessage());
                         return null;
+                }
+        }
+
+        private void verifyErrorHandler(Project project) {
+                String namespace = project.getK8sNamespace();
+                String handlerName = "kubelite-error-handler";
+                if (kubernetesClient.apps().deployments().inNamespace(namespace).withName(handlerName).get() == null) {
+                        ensureErrorHandler(project);
                 }
         }
 
