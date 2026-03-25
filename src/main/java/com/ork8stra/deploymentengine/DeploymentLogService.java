@@ -16,6 +16,7 @@ import java.util.concurrent.Executors;
 public class DeploymentLogService {
 
     private final DeploymentRepository deploymentRepository;
+    private final DeploymentEventService deploymentEventService;
     private final ExecutorService logExecutor = Executors.newCachedThreadPool();
 
     public SseEmitter streamDeploymentLogs(UUID deploymentId, String stageId) {
@@ -37,25 +38,44 @@ public class DeploymentLogService {
                 }
 
                 for (DeploymentStage stage : stagesToStream) {
+                    // Update stage to RUNNING
+                    stage.setStatus(DeploymentStage.PipelineStatus.RUNNING);
+                    stage.setStartTime(java.time.Instant.now());
+                    deploymentRepository.saveAndFlush(deployment);
+                    deploymentEventService.broadcastUpdate(deployment);
+
                     emitter.send(SseEmitter.event().data("\n--- Stage: " + stage.getName() + " ---"));
                     
                     // Mocking technical output for specific stages
                     if (stage.getName().equals("Source Compilation")) {
                         for (DeploymentStep step : stage.getSteps()) {
+                            step.setStatus(DeploymentStage.PipelineStatus.RUNNING);
+                            deploymentEventService.broadcastUpdate(deployment);
                             emitter.send(SseEmitter.event().data("[" + stage.getName() + "] Executing " + step.getName() + "..."));
-                            Thread.sleep(100);
+                            Thread.sleep(2000); 
+                            step.setStatus(DeploymentStage.PipelineStatus.SUCCESS);
                         }
                         emitter.send(SseEmitter.event().data("[Source Compilation] Maven build successful. Image pushed to registry."));
+                        Thread.sleep(1000);
                     } else if (stage.getName().equals("Security & Quality")) {
                         emitter.send(SseEmitter.event().data("[Security & Quality] Running static analysis..."));
-                        Thread.sleep(150);
+                        Thread.sleep(5000);
                         emitter.send(SseEmitter.event().data("[Security & Quality] SonarQube results: 0 Critical, 0 Major vulnerabilities."));
+                        Thread.sleep(1000);
                     } else if (stage.getName().equals("Kubernetes Rollout")) {
                         emitter.send(SseEmitter.event().data("[Deploy] Initializing K8s resources..."));
+                        Thread.sleep(4000);
                         emitter.send(SseEmitter.event().data("[Deploy] Namespace: " + deployment.getApplicationId()));
                         emitter.send(SseEmitter.event().data("[Deploy] Applying Deployment resource..."));
+                        Thread.sleep(6000);
                         emitter.send(SseEmitter.event().data("[Deploy] Application is now LIVE at: " + deployment.getIngressUrl()));
                     }
+
+                    // Update stage to SUCCESS
+                    stage.setStatus(DeploymentStage.PipelineStatus.SUCCESS);
+                    stage.setEndTime(java.time.Instant.now());
+                    deploymentRepository.saveAndFlush(deployment);
+                    deploymentEventService.broadcastUpdate(deployment);
                 }
 
                 emitter.send(SseEmitter.event().data("\nLog stream finished."));

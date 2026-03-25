@@ -1,43 +1,35 @@
-sequenceDiagram
-    autonumber
-    
     participant User as Developer
-    participant API as  API Service
-    participant DB as  PostgreSQL
-    participant MQ as  RabbitMQ
-    participant Worker as  Worker
-    participant K8s as Kubernetes
-    participant Kaniko as Kaniko
-    participant Registry as Registry
-    participant Redis as Redis
+    participant API as API Layer (Spring Boot)
+    participant DB as PostgreSQL (State)
+    participant MQ as RabbitMQ (Queue)
+    participant Build as Build Engine (Worker)
+    participant Cluster as Runtime Cluster (K8s)
+    participant Kaniko as Build Tool (Kaniko)
+    participant Registry as Image Registry
 
-    Note over User,Redis: === TRIGGER DEPLOY ===
+    Note over User,Registry: === DEPLOYMENT INITIALIZATION ===
     
     User->>API: POST /api/apps/{id}/deploy
-    API->>DB: Create Build (QUEUED)
+    API->>DB: Create Build Record (QUEUED)
     API->>MQ: Publish BuildRequestedEvent
     API-->>User: 202 Accepted {buildId}
     
-    Note over User,Redis: === BUILD PHASE ===
+    Note over User,Registry: === BUILD & PACKAGING ===
     
-    MQ->>Worker: Consume event
-    Worker->>DB: Update Build (BUILDING)
-    Worker->>K8s: Create Kaniko Pod
+    MQ->>Build: Consume Build Event
+    Build->>DB: Update Build (BUILDING)
+    Build->>Cluster: Create Build Pod (Kaniko)
     
-    loop Stream Logs
-        Kaniko->>Worker: Pod logs
-        Worker->>Redis: PUBLISH logs
-        Redis-->>User: WebSocket
+    loop Log Streaming
+        Kaniko->>Build: Stream Logs
+        Build-->>User: WebSocket (Live Logs)
     end
     
-    Kaniko->>Registry: Push image
-    Worker->>DB: Update Build (SUCCESS)
+    Kaniko->>Registry: Push Image Artifact
+    Build->>DB: Update Build (SUCCESS)
     
-    Note over User,Redis: === DEPLOY PHASE ===
+    Note over User,Registry: === RUNTIME DEPLOYMENT ===
     
-    Worker->>K8s: Apply Deployment
-    Worker->>K8s: Apply Service
-    Worker->>K8s: Apply Ingress
-    Worker->>DB: Create Deployment (HEALTHY)
-    Worker->>Redis: PUBLISH complete
-    Redis-->>User: 🚀 Live at: app.project.ork8stra.local
+    Build->>Cluster: Apply K8s Manifests
+    Build->>DB: Create Deployment (HEALTHY)
+    Cluster-->>User: App reachable at: [url]

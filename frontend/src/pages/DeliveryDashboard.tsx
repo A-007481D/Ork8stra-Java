@@ -198,6 +198,7 @@ export default function DeliveryDashboard({ _org, _activeTab }: { _org: Organiza
                         appId={selectedBuild.applicationId}
                         token={token}
                         onClose={() => setSelectedBuild(null)}
+                        type={selectedBuild.deploymentId ? 'deployment' : 'build'}
                     />
                 )}
             </AnimatePresence>

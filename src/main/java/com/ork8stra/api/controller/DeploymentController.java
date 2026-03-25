@@ -45,12 +45,15 @@ public class DeploymentController {
     }
 
     @GetMapping(value = "/{deploymentId}/events", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
-    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter subscribeToDeployment(@PathVariable UUID deploymentId) {
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter subscribeToDeployment(
+            @PathVariable UUID appId,
+            @PathVariable UUID deploymentId) {
         return deploymentEventService.subscribe(deploymentId);
     }
 
     @GetMapping(value = "/{deploymentId}/logs", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
     public org.springframework.web.servlet.mvc.method.annotation.SseEmitter streamDeploymentLogs(
+            @PathVariable UUID appId,
             @PathVariable UUID deploymentId,
             @RequestParam(required = false) String stageId) {
         return deploymentLogService.streamDeploymentLogs(deploymentId, stageId);

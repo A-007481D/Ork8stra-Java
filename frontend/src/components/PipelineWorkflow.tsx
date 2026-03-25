@@ -11,16 +11,15 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import StageNode from './StageNode';
 
-const nodeTypes = {
-  stage: StageNode,
-};
-
 interface PipelineWorkflowProps {
   stages: any[];
   onNodeClick?: (stageId: string) => void;
 }
 
 const PipelineWorkflow = ({ stages, onNodeClick }: PipelineWorkflowProps) => {
+  const nodeTypesMemo = useMemo(() => ({ stage: StageNode }), []);
+  const edgeTypesMemo = useMemo(() => ({}), []);
+  
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -59,7 +58,7 @@ const PipelineWorkflow = ({ stages, onNodeClick }: PipelineWorkflowProps) => {
 
       if (index > 0) {
         const prevStage = stages[index - 1];
-        const isActive = stage.status === 'RUNNING' || (prevStage.status === 'SUCCESS' && stage.status === 'PENDING');
+        const isActive = (stage.status === 'RUNNING' || stage.status === 'IN_PROGRESS') || ((prevStage.status === 'SUCCESS' || prevStage.status === 'HEALTHY') && stage.status === 'PENDING');
         
         newEdges.push({
           id: `e-${index-1}-${index}`,
@@ -103,7 +102,8 @@ const PipelineWorkflow = ({ stages, onNodeClick }: PipelineWorkflowProps) => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
-        nodeTypes={nodeTypes}
+        nodeTypes={nodeTypesMemo}
+        edgeTypes={edgeTypesMemo}
         fitView
         selectNodesOnDrag={false}
         nodesDraggable={true}

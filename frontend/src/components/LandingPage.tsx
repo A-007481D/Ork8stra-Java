@@ -1,182 +1,290 @@
-"use client";
-
-
-import { motion } from "framer-motion";
-import { ArrowRight, GithubIcon, Globe, BarChart3, Lock, LayoutGrid } from "lucide-react";
+import React, { useRef } from "react";
+import { motion, useScroll, useSpring } from "framer-motion";
 import { Link } from "react-router-dom";
-import DashboardPreview from "./DashboardPreview";
 import CommandPalette from "./CommandPalette";
-import BentoGrid from "./BentoGrid";
 import Navbar from "./Navbar";
 
 export default function LandingPage() {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const { scrollYProgress } = useScroll({
+        target: containerRef,
+        offset: ["start start", "end end"]
+    });
+
+    const scaleY = useSpring(scrollYProgress, {
+        stiffness: 100,
+        damping: 30,
+        restDelta: 0.001
+    });
+
     return (
-        <div className="min-h-screen w-full bg-[#050505] text-white font-sans selection:bg-blue-500/30 overflow-x-hidden">
+        <div ref={containerRef} className="min-h-screen w-full bg-[#020202] text-white font-sans selection:bg-blue-500/30 overflow-x-hidden">
             <Navbar />
 
-            {/* Background Decor */}
-            <div className="fixed inset-0 pointer-events-none z-0">
-                <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/5 blur-[120px] rounded-full" />
-                <div className="absolute inset-0 bg-grid-white opacity-40 mix-blend-overlay" />
-            </div>
-
             {/* ---------------------------------------------------------------------------
-          HERO SECTION: COMMAND PALETTE FIRST
+          HERO: THE COMMAND SOURCE
           --------------------------------------------------------------------------- */}
-            <section className="relative pt-48 pb-32 px-6 max-w-[1200px] mx-auto flex flex-col items-center text-center z-10">
+            <section className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden">
+                <div className="absolute inset-0 z-0 pointer-events-none">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.03)_0%,transparent_70%)]" />
+                </div>
+
                 <motion.div 
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    transition={{ duration: 0.8 }}
+                    transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+                    className="z-10 text-center mb-16"
                 >
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-slate-500 text-[10px] font-bold tracking-widest uppercase mb-8">
-                        The Cloud Platform for Professionals
-                    </div>
-                    <h1 className="text-6xl md:text-8xl font-bold tracking-tight text-white mb-8">
-                        Deploy in <span className="text-slate-400">Seconds.</span>
+                    <h1 className="text-8xl md:text-[8rem] xl:text-[11rem] font-black tracking-tighter leading-[0.85] mb-8 selection:bg-white selection:text-black">
+                        Infrastructure <br /><span className="text-slate-900">unbound.</span>
                     </h1>
-                    <p className="text-slate-500 text-lg max-w-xl mx-auto mb-16 leading-relaxed">
-                        KubeLite is the infrastructure engine that automates the boring parts 
-                        of Kubernetes, giving engineers their time back.
+                    <p className="text-slate-500 text-lg md:text-2xl font-medium tracking-tight max-w-2xl mx-auto px-4 lowercase">
+                        The definitive engine for high-density applications. 
+                        One command, limitless orchestration.
                     </p>
                 </motion.div>
 
-                {/* The Interactive Command Palette */}
                 <motion.div
-                    initial={{ scale: 0.95, opacity: 0 }}
+                    initial={{ scale: 0.98, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
-                    className="w-full mb-32"
+                    transition={{ delay: 0.3, duration: 1 }}
+                    className="z-10 w-full max-w-2xl px-4"
                 >
                     <CommandPalette />
+                </motion.div>
+
+                {/* The Scroll Indicator */}
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.3 }}
+                    transition={{ delay: 1, duration: 2 }}
+                    className="absolute bottom-12 flex flex-col items-center gap-4 text-[9px] font-black uppercase tracking-[0.4em] text-slate-800"
+                >
+                    <span>Scroll to Unfold</span>
+                    <div className="w-[1px] h-16 bg-gradient-to-b from-slate-900 to-transparent" />
                 </motion.div>
             </section>
 
             {/* ---------------------------------------------------------------------------
-          BENTO GRID SECTION
+          THE STREAM: ORGANIC WORKFLOW VISUALIZATION
           --------------------------------------------------------------------------- */}
-            <BentoGrid />
-
-            {/* ---------------------------------------------------------------------------
-          BENTO CONTENT: HIGH DENSITY FEATURES (Integration of original elements)
-          --------------------------------------------------------------------------- */}
-            <section className="relative pb-40 px-6 max-w-[1200px] mx-auto z-10">
-                <div className="grid grid-cols-12 gap-6">
+            <section className="relative py-32 lg:py-64 px-6 z-10">
+                <div className="max-w-[1400px] mx-auto flex flex-col items-center">
                     
-                    {/* Big Card: Git Engine */}
-                    <div className="col-span-12 lg:col-span-8 glass rounded-3xl p-10 overflow-hidden relative group border border-white/10 shadow-2xl">
-                        <div className="relative z-10 max-w-md">
-                            <div className="w-12 h-12 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-6 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
-                                <GithubIcon className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-2xl font-bold mb-4">Git-First Workflows.</h3>
-                            <p className="text-slate-500 leading-relaxed mb-8">
-                                Push code, we handle the rest. Our build engine produces OCI-compliant 
-                                images and rolls them out to your production cluster with zero downtime.
-                            </p>
-                            <div className="flex gap-4">
-                                <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[11px] font-mono text-slate-400">GitHub</div>
-                                <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[11px] font-mono text-slate-400">GitLab</div>
-                                <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[11px] font-mono text-slate-400">Webhooks</div>
-                            </div>
-                        </div>
-                        {/* Visual element */}
-                        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] opacity-20 group-hover:opacity-40 transition-opacity">
-                            <DashboardPreview />
-                        </div>
+                    {/* The Path Stream (Reactive SVG) */}
+                    <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px bg-white/5 pointer-events-none overflow-hidden">
+                        <motion.div 
+                            style={{ scaleY }}
+                            className="absolute top-0 left-0 right-0 origin-top bg-gradient-to-b from-blue-500 via-purple-500 to-emerald-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] h-full"
+                        />
                     </div>
 
-                    {/* Small Card: Regional Edge */}
-                    <div className="col-span-12 lg:col-span-4 glass rounded-3xl p-10 flex flex-col justify-between group border border-white/10 shadow-2xl">
-                        <div>
-                            <Globe className="w-8 h-8 text-emerald-400 mb-6 group-hover:rotate-12 transition-transform" />
-                            <h3 className="text-2xl font-bold mb-4">Global Edge.</h3>
-                            <p className="text-slate-500 text-sm leading-relaxed">
-                                Automatic anycast routing and global CDN integration. Serve users from 
-                                the closest node with <span className="text-emerald-400 font-bold tracking-tighter">12ms latency</span>.
-                            </p>
-                        </div>
-                        <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Active Regions</span>
-                            <div className="flex -space-x-2">
-                                {[...Array(4)].map((_, i) => (
-                                    <div key={i} className="w-6 h-6 rounded-full border-2 border-[#050505] bg-emerald-500/20 flex items-center justify-center">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <div className="space-y-[60vh] lg:space-y-[80vh] w-full">
+                        
+                        {/* Point 1: Integrate (The Terminal) */}
+                        <StepSection
+                            title="Integrate"
+                            description="Connect your repository. We monitor intent, not just diffs. Instant recognition of builds, runtimes, and dependencies."
+                            side="left"
+                            mockup={
+                                <div className="w-full aspect-video bg-black/40 backdrop-blur-3xl rounded-2xl border border-white/5 p-4 md:p-6 font-mono text-[10px] md:text-xs text-slate-400 overflow-hidden relative shadow-2xl">
+                                    <div className="flex gap-1.5 mb-6">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/20" />
+                                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20" />
+                                        <div className="w-2.5 h-2.5 rounded-full bg-green-500/20" />
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex gap-2">
+                                            <span className="text-emerald-500">➜</span>
+                                            <span className="text-blue-400 font-bold">~</span>
+                                            <span>git push kubelite main</span>
+                                        </div>
+                                        <div className="text-slate-600">Enumerating objects: 102, done.</div>
+                                        <div className="text-slate-600">Counting objects: 100% (102/102), done.</div>
+                                        <div className="flex gap-2">
+                                            <span className="text-purple-400">kubelite</span>
+                                            <span className="text-slate-300 animate-pulse">Detecting runtime: Node.js (v20)</span>
+                                        </div>
+                                        <div className="text-slate-500 mt-4 opacity-50 italic">// initializing platform connection...</div>
+                                    </div>
+                                    <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-blue-500/10 to-transparent pointer-events-none" />
+                                </div>
+                            }
+                        />
 
-                    {/* Wide Card: Observability */}
-                    <div className="col-span-12 lg:col-span-12 glass rounded-3xl p-10 grid grid-cols-1 md:grid-cols-2 gap-12 items-center group border border-white/10 shadow-2xl">
-                        <div>
-                            <div className="w-10 h-10 rounded-lg bg-purple-600/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-6">
-                                <BarChart3 className="w-5 h-5" />
-                            </div>
-                            <h3 className="text-3xl font-bold mb-4">Smart Observability.</h3>
-                            <p className="text-slate-500 leading-relaxed mb-6">
-                                Integrated metrics, logging, and tracing. No extra agents required. 
-                                We monitor everything from pod resource usage to ingress error rates 
-                                out of the box.
-                            </p>
-                            <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">
-                                Explore Metrics <ArrowRight className="w-4 h-4" />
-                            </Link>
-                        </div>
-                        <div className="relative h-48 bg-black/40 rounded-xl border border-white/5 overflow-hidden flex items-end px-6 pb-2 gap-1 group-hover:gap-1.5 transition-all">
-                             {[...Array(40)].map((_, i) => (
-                                <motion.div 
-                                    key={i}
-                                    className="flex-1 bg-purple-500/20 rounded-t-sm"
-                                    initial={{ height: 10 }}
-                                    animate={{ height: `${20 + ((i * 13) % 80)}%` }}
-                                    transition={{ repeat: Infinity, duration: 2, delay: i * 0.05, repeatType: "reverse" }}
-                                />
-                             ))}
-                        </div>
-                    </div>
+                        {/* Point 2: Build (The Crystal) */}
+                        <StepSection
+                            title="Build"
+                            description="Infrastructure at a molecular level. We package your source into optimized, immutable image layers ready for global distribution."
+                            side="right"
+                            mockup={
+                                <div className="w-full aspect-square md:aspect-video bg-black/40 backdrop-blur-3xl rounded-2xl border border-white/5 flex items-center justify-center relative overflow-hidden group shadow-2xl">
+                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.1),transparent_70%)]" />
+                                    <div className="relative w-24 h-24 md:w-32 md:h-32">
+                                        <motion.div 
+                                            animate={{ rotate: 360 }}
+                                            transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
+                                            className="absolute inset-0 border border-purple-500/30 rounded-3xl"
+                                        />
+                                        <motion.div 
+                                            animate={{ rotate: -360 }}
+                                            transition={{ repeat: Infinity, duration: 15, ease: "linear" }}
+                                            className="absolute inset-2 border border-blue-500/20 rounded-2xl"
+                                        />
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="w-8 h-8 md:w-12 md:h-12 bg-white rounded flex items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.4)]">
+                                                <div className="w-4 h-4 md:w-6 md:h-6 bg-black rounded-sm animate-pulse" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="absolute bottom-6 left-6 right-6 flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-700">
+                                        <span>Layer 04 // Optimized</span>
+                                        <span>99.2% Reduced</span>
+                                    </div>
+                                </div>
+                            }
+                        />
 
-                    {/* Infrastructure Card */}
-                    <div className="col-span-12 lg:col-span-6 glass rounded-3xl p-10 group border border-white/10 shadow-2xl">
-                        <Lock className="w-8 h-8 text-blue-400 mb-6 group-hover:scale-110 transition-transform" />
-                        <h3 className="text-2xl font-bold mb-4">Hardened Security.</h3>
-                        <p className="text-slate-500 leading-relaxed">
-                            Every environment is isolated with network policies and strict resource quotas. 
-                            Built-in RBAC ensures your team only has access to what they need.
-                        </p>
-                    </div>
+                        {/* Point 3: Deploy (The Global Map) */}
+                        <StepSection
+                            title="Deploy"
+                            description="Production is a state of being, not a destination. Your apps live on the edge, responding with sub-millisecond latency worldwide."
+                            side="center"
+                            mockup={
+                                <div className="w-full aspect-video bg-black/40 backdrop-blur-3xl rounded-2xl border border-white/5 p-8 relative overflow-hidden shadow-2xl">
+                                    <div className="absolute inset-0 opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] blend-overlay" />
+                                    <div className="flex flex-col items-center justify-center h-full relative z-10">
+                                        <div className="relative w-full h-full max-w-sm">
+                                            {[
+                                                { t: '15%', l: '20%' }, { t: '40%', l: '10%' }, 
+                                                { t: '25%', l: '70%' }, { t: '60%', l: '85%' },
+                                                { t: '75%', l: '30%' }
+                                            ].map((pos, i) => (
+                                                <motion.div 
+                                                    key={i}
+                                                    initial={{ scale: 0, opacity: 0 }}
+                                                    animate={{ scale: [1, 2], opacity: [0.8, 0] }}
+                                                    transition={{ repeat: Infinity, duration: 2, delay: i * 0.4 }}
+                                                    className="absolute w-4 h-4 bg-emerald-500/20 rounded-full"
+                                                    style={{ top: pos.t, left: pos.l }}
+                                                />
+                                            ))}
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <div className="text-center">
+                                                    <div className="text-5xl md:text-7xl font-black text-emerald-500 tracking-tighter mb-2">99.9</div>
+                                                    <div className="text-[10px] font-black text-slate-700 uppercase tracking-[0.3em]">Uptime Confidence</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        />
 
-                    {/* Developer Experience Card */}
-                    <div className="col-span-12 lg:col-span-6 glass rounded-3xl p-10 group border border-white/10 shadow-2xl">
-                        <LayoutGrid className="w-8 h-8 text-amber-400 mb-6 group-hover:scale-110 transition-transform" />
-                        <h3 className="text-2xl font-bold mb-4">Project Management.</h3>
-                        <p className="text-slate-500 leading-relaxed">
-                            Organize your infrastructure into Teams and Projects. Manage multiple 
-                            environments (Dev, Staging, Production) from a single control plane.
-                        </p>
                     </div>
-
                 </div>
             </section>
 
-            {/* CTA SECTION: MINIMALIST */}
-            <section className="py-48 px-6 text-center border-t border-white/5">
-                <h2 className="text-5xl font-bold mb-8">Stop managing, <br />start building.</h2>
-                <Link to="/register" className="px-12 py-5 rounded-2xl bg-white text-black font-black text-lg hover:scale-105 transition-transform inline-block">
-                    Deploy Now
+            {/* ---------------------------------------------------------------------------
+          THE CLI: COMMAND THE FUTURE
+          --------------------------------------------------------------------------- */}
+            <section className="py-64 px-6 text-center border-t border-white/5">
+                <motion.h2 
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="text-[10vw] font-black mb-16 tracking-tighter leading-[0.8] selection:bg-white selection:text-black"
+                >
+                    Master the <br /><span className="text-slate-900 border-b-8 border-slate-900 pb-2">lifecycle.</span>
+                </motion.h2>
+                <Link to="/register" className="group relative px-24 py-10 bg-white text-black font-black text-3xl overflow-hidden inline-block transition-transform hover:scale-105 active:scale-95 shadow-2xl">
+                    <span className="relative z-10 uppercase tracking-tighter">Deploy Now</span>
+                    <motion.div 
+                        className="absolute inset-0 bg-slate-200 z-0"
+                        initial={{ x: '-101%' }}
+                        whileHover={{ x: '0%' }}
+                        transition={{ duration: 0.3, ease: 'circOut' }}
+                    />
                 </Link>
             </section>
 
-            {/* Footer */}
-            <footer className="py-20 px-6 max-w-[1200px] mx-auto opacity-50 text-xs flex justify-between items-center">
-                <span>© 2026 KubeLite Inc. All rights reserved.</span>
-                <div className="flex gap-8">
-                    <Link to="#" className="hover:text-white transition-colors">Twitter</Link>
-                    <Link to="#" className="hover:text-white transition-colors">GitHub</Link>
-                    <Link to="#" className="hover:text-white transition-colors">Terms</Link>
+            {/* Elite Footer */}
+            <footer className="py-40 px-6 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-24 max-w-[1400px] mx-auto">
+                <div className="space-y-6 text-center md:text-left">
+                    <h4 className="text-white font-black text-4xl tracking-tighter">KubeLite</h4>
+                    <p className="text-slate-800 max-w-sm text-[10px] font-black uppercase tracking-[0.2em] leading-relaxed">
+                        Automating the world's most sophisticated infrastructure, <br />one command at a time.
+                    </p>
+                </div>
+                
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-32">
+                    <div className="space-y-8">
+                        <div className="text-slate-900 text-[11px] font-black uppercase tracking-widest">Engine</div>
+                        <div className="flex flex-col gap-5 text-sm font-bold text-slate-600">
+                            <Link to="#" className="hover:text-white transition-colors">Insights</Link>
+                            <Link to="#" className="hover:text-white transition-colors">Pricing</Link>
+                            <Link to="#" className="hover:text-white transition-colors">Docs</Link>
+                        </div>
+                    </div>
+                    <div className="space-y-8">
+                        <div className="text-slate-900 text-[11px] font-black uppercase tracking-widest">Connect</div>
+                        <div className="flex flex-col gap-5 text-sm font-bold text-slate-600">
+                            <Link to="#" className="hover:text-white transition-colors">YouTube</Link>
+                            <Link to="#" className="hover:text-white transition-colors">X / Twitter</Link>
+                            <Link to="#" className="hover:text-white transition-colors">GitHub</Link>
+                        </div>
+                    </div>
+                    <div className="space-y-8 hidden lg:block">
+                        <div className="text-slate-900 text-[11px] font-black uppercase tracking-widest">Network</div>
+                        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/5 rounded-full border border-emerald-500/10">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[10px] font-black text-emerald-500/80 uppercase">All Nodes Operational</span>
+                        </div>
+                    </div>
                 </div>
             </footer>
+        </div>
+    );
+}
+
+function StepSection({ title, description, side, mockup }: { title: string, description: string, side: 'left' | 'right' | 'center', mockup: React.ReactNode }) {
+    if (side === 'center') {
+        return (
+            <div className="flex flex-col items-center gap-20">
+                <motion.div 
+                    initial={{ opacity: 0, y: 40 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ margin: "-100px" }}
+                    className="max-w-2xl w-full"
+                >
+                    {mockup}
+                </motion.div>
+                <div className="text-center max-w-xl">
+                    <h3 className="text-7xl font-black mb-6 tracking-tighter">{title}</h3>
+                    <p className="text-slate-500 text-lg md:text-xl font-medium leading-relaxed lowercase">{description}</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`flex flex-col items-center gap-12 lg:gap-0 lg:flex-row lg:justify-between w-full`}>
+            <div className={`lg:w-[45%] ${side === 'left' ? 'lg:order-1 lg:text-right' : 'lg:order-2 lg:text-left'} space-y-6 order-2`}>
+                <h3 className="text-7xl font-black tracking-tighter text-white">{title}</h3>
+                <p className="text-slate-500 text-lg md:text-xl font-medium leading-relaxed lowercase">
+                    {description}
+                </p>
+            </div>
+
+            <motion.div 
+                initial={{ opacity: 0, x: side === 'left' ? 40 : -40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ margin: "-100px" }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className={`lg:w-[45%] ${side === 'left' ? 'lg:order-2' : 'lg:order-1'} order-1 w-full`}
+            >
+                {mockup}
+            </motion.div>
         </div>
     );
 }

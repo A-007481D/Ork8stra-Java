@@ -70,6 +70,7 @@ const StageNode = ({ data }: any) => {
   const StageIcon = theme.icon;
   
   const [progress, setProgress] = useState(0);
+  const [liveDuration, setLiveDuration] = useState(0);
   const nodeRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number | null>(null);
   const [isActive, setIsActive] = useState(false);
@@ -83,7 +84,18 @@ const StageNode = ({ data }: any) => {
       const delay = setTimeout(() => {
         setIsActive(true);
       }, 50); 
-      return () => clearTimeout(delay);
+      
+      const interval = setInterval(() => {
+        if (startTime) {
+          const st = new Date(startTime).getTime();
+          setLiveDuration(Math.floor((Date.now() - st) / 1000));
+        }
+      }, 1000);
+
+      return () => {
+        clearTimeout(delay);
+        clearInterval(interval);
+      };
     } else {
       setIsActive(false);
       if (requestRef.current) {
@@ -93,8 +105,9 @@ const StageNode = ({ data }: any) => {
       // Immediate update for completed/pending states
       const finalP = status === 'SUCCESS' ? 100 : (status === 'FAILED' ? (initialProgress * 100) : 0);
       setProgress(finalP);
+      setLiveDuration(0);
     }
-  }, [status, initialProgress]);
+  }, [status, startTime, initialProgress]);
 
   useEffect(() => {
     if (!isActive || !startTime) return;
@@ -124,6 +137,7 @@ const StageNode = ({ data }: any) => {
       case 'FAILED':
         return <XCircle className="w-3.5 h-3.5 text-red-400" />;
       case 'RUNNING':
+      case 'IN_PROGRESS':
         return (
           <motion.div
             animate={{ rotate: 360 }}
@@ -137,11 +151,11 @@ const StageNode = ({ data }: any) => {
     }
   };
 
-  const statusBorderClass = status === 'RUNNING' ? 'border-white/30' : (status === 'SUCCESS' ? 'border-emerald-500/30' : theme.border);
+  const statusBorderClass = (status === 'RUNNING' || status === 'IN_PROGRESS') ? 'border-white/30' : (status === 'SUCCESS' || status === 'HEALTHY' ? 'border-emerald-500/30' : theme.border);
   
   const backgroundStyle = {
     '--progress': `${progress}%`,
-    '--fill-color': status === 'SUCCESS' ? 'rgba(16, 185, 129, 0.08)' : theme.fill,
+    '--fill-color': (status === 'SUCCESS' || status === 'HEALTHY') ? 'rgba(16, 185, 129, 0.08)' : theme.fill,
   } as React.CSSProperties;
 
   return (
@@ -152,7 +166,7 @@ const StageNode = ({ data }: any) => {
     >
       {/* Liquid Fill Element */}
       <div 
-         className="absolute top-0 left-0 bottom-0 z-0 overflow-hidden transition-all duration-300"
+         className="absolute top-0 left-0 bottom-0 z-0 overflow-hidden transition-all duration-800"
          style={{ 
             backgroundColor: 'var(--fill-color)', 
             width: 'var(--progress)',
@@ -180,16 +194,16 @@ const StageNode = ({ data }: any) => {
             <span className={`text-[9px] font-bold tracking-wider ${status === 'RUNNING' ? 'text-white' : 'text-slate-500/80'}`}>
               {status}
             </span>
-            {(duration || progress > 0) && (
+            {(duration || progress > 0 || liveDuration > 0) && (
               <span className="text-[9px] text-slate-500/80 font-mono">
-                {status === 'RUNNING' ? `${Math.round(progress)}%` : duration}
+                {status === 'RUNNING' ? `${liveDuration}s` : duration}
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {status === 'RUNNING' && (
+      {(status === 'RUNNING' || status === 'IN_PROGRESS') && (
         <div className="absolute -bottom-[1px] left-0 right-0 h-[1.5px] bg-white/5 overflow-hidden">
           <div 
             className="h-full transition-all duration-300"

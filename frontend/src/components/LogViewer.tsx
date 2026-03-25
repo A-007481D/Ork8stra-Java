@@ -9,9 +9,18 @@ interface LogViewerProps {
     onClose: () => void;
     token: string;
     isEmbedded?: boolean;
+    type?: 'build' | 'deployment';
 }
 
-export default function LogViewer({ deploymentId, appId, stageId, onClose, token, isEmbedded = false }: LogViewerProps) {
+export default function LogViewer({ 
+    deploymentId, 
+    appId, 
+    stageId, 
+    onClose, 
+    token, 
+    isEmbedded = false,
+    type = 'deployment'
+}: LogViewerProps) {
     const [logs, setLogs] = useState<string[]>([]);
     const [isConnected, setIsConnected] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
@@ -24,7 +33,11 @@ export default function LogViewer({ deploymentId, appId, stageId, onClose, token
         const controller = new AbortController();
         const fetchLogs = async () => {
             try {
-                const url = new URL(`/api/v1/apps/${appId}/deployments/${deploymentId}/logs`, window.location.origin);
+                const basePath = type === 'build' 
+                    ? `/api/v1/apps/${appId}/build/${deploymentId}/logs`
+                    : `/api/v1/apps/${appId}/deployments/${deploymentId}/logs`;
+                
+                const url = new URL(basePath, window.location.origin);
                 if (stageId) url.searchParams.append('stageId', stageId);
 
                 const response = await fetch(url.toString(), {
@@ -60,19 +73,17 @@ export default function LogViewer({ deploymentId, appId, stageId, onClose, token
                     buffer = lines.pop() || ""; // Keep the last partial chunk
 
                     for (const line of lines) {
-                        // Support both raw data (default SSE) and explicitly prefixed data
-                        let data = "";
-                        if (line.startsWith("data: ")) {
-                            data = line.substring(6);
-                        } else if (line.includes("data: ")) {
-                            // Handle cases where "event: ...\ndata: ..." is present
-                            data = line.split("data: ").pop() || "";
-                        } else {
-                            data = line;
-                        }
-
-                        if (data.trim()) {
-                            setLogs((prev: string[]) => [...prev.slice(-999), data]); 
+                        if (!line.trim()) continue;
+                        
+                        const dataMatch = line.match(/^data:\s*(.+)$/m);
+                        if (dataMatch) {
+                            const data = dataMatch[1].trim();
+                            if (data) {
+                                setLogs((prev: string[]) => [...prev.slice(-999), data]);
+                            }
+                        } else if (!line.includes("event: ")) {
+                            // Support raw lines if they don't have event/data prefix
+                             setLogs((prev: string[]) => [...prev.slice(-999), line.trim()]);
                         }
                     }
                 }

@@ -62,14 +62,24 @@ const mapDeploymentStatusToUi = (status?: string | null): Service['status'] => {
 const SidebarItem = ({ icon: Icon, label, active, hasSub, onClick, collapsed }: any) => (
     <button
         onClick={onClick}
-        className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-3 py-1.5 rounded-md text-sm transition-colors group ${active
+        className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-md text-sm transition-all duration-200 group relative ${active
             ? "bg-[#2C2C2C]/60 text-[#E3E3E3]"
             : "text-[#989898] hover:bg-[#2C2C2C]/30 hover:text-[#E3E3E3]"
             }`}
         title={collapsed ? label : undefined}
     >
+        {/* Active Accent Bar */}
+        {active && (
+            <motion.div 
+                layoutId="active-bar"
+                className="absolute left-0 w-1 h-5 bg-blue-500 rounded-r-full shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+            />
+        )}
+
         <div className={`flex items-center gap-2.5 ${collapsed ? 'justify-center w-full' : ''}`}>
-            <Icon className={`w-4 h-4 transition-colors ${active ? "text-[#E3E3E3]" : "text-[#888] group-hover:text-[#AAA]"}`} />
+            <Icon className={`${collapsed ? 'w-5 h-5' : 'w-4 h-4'} transition-all duration-300 ${active ? "text-[#E3E3E3] scale-110" : "text-[#888] group-hover:text-[#AAA] group-hover:scale-110"}`} />
             {!collapsed && <span className="font-medium whitespace-nowrap">{label}</span>}
         </div>
         {!collapsed && hasSub && <ChevronRight className="w-3 h-3 text-[#555]" />}
@@ -456,13 +466,8 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
             fetchData();
         });
 
-        eventSource.addEventListener("error", (event: MessageEvent) => {
-            appendLog(`⚠️ ${event.data}`);
-            eventSource.close();
-        });
-
         eventSource.onerror = (error) => {
-            console.error("SSE connection error:", error);
+            console.error("Logs SSE connection error:", error);
             eventSource.close();
         };
 
@@ -636,7 +641,7 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                     </Button>
                 </div>
             </div>
-
+ 
             {/* Content Split */}
             <div className="flex-1 overflow-hidden flex gap-6 px-6 pb-6">
 
@@ -1064,27 +1069,36 @@ export default function Dashboard() {
             {/* SIDEBAR */}
             <motion.div
                 initial={false}
-                animate={{ width: isSidebarOpen ? 240 : 60 }}
+                animate={{ width: isSidebarOpen ? 240 : 72 }}
                 onDoubleClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="h-full bg-[#141414] border-r border-[#242424] flex flex-col shrink-0 pt-3 relative z-30"
+                transition={{ type: "spring", damping: 20, stiffness: 200 }}
+                className="h-full bg-[#141414] border-r border-[#242424] flex flex-col shrink-0 pt-3 relative z-50"
             >
-                {/* Toggle Button */}
+                {/* Command Handle Toggle */}
                 <button
                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    className="absolute -right-3 top-3 w-6 h-6 bg-[#141414] border border-[#242424] rounded-full flex items-center justify-center text-[#666] hover:text-[#E3E3E3] z-50 shadow-sm transition-colors"
+                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-3 h-24 group z-50 focus:outline-none"
+                    aria-label={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
                 >
-                    <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${isSidebarOpen ? 'rotate-180' : '0'}`} />
+                    <div className="absolute inset-0 bg-[#242424] border border-[#333] border-l-0 rounded-r-xl transition-all duration-300 group-hover:w-4 group-hover:bg-[#2C2C2C] group-hover:border-[#444] shadow-[4px_0_10px_rgba(0,0,0,0.3)] flex items-center justify-center">
+                        <div className="flex flex-col gap-1 items-center opacity-40 group-hover:opacity-100 transition-opacity">
+                            <div className="w-0.5 h-1.5 bg-[#666] rounded-full" />
+                            <div className="w-0.5 h-1.5 bg-[#666] rounded-full" />
+                            <div className="w-0.5 h-1.5 bg-[#666] rounded-full" />
+                        </div>
+                        {/* Magnetic Glow */}
+                        <div className="absolute inset-0 rounded-r-xl opacity-0 group-hover:opacity-20 bg-gradient-to-r from-transparent to-blue-500 transition-opacity" />
+                    </div>
                 </button>
                 {/* Sidebar Header - Organization Switcher */}
                 <div className="p-4 border-b border-[#222]">
                     <div className="relative">
                         <button
                             onClick={() => setIsTeamDropdownOpen(!isTeamDropdownOpen)}
-                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-[#1A1A1A] transition-colors group"
+                            className={`w-full flex items-center p-2 rounded-lg hover:bg-[#1A1A1A] transition-colors group ${!isSidebarOpen ? 'justify-center px-0' : 'justify-between'}`}
                         >
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-md bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-900/20">
+                                <div className={`w-8 h-8 rounded-md bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-900/20 ${!isSidebarOpen ? 'mx-auto' : ''}`}>
                                     <Building2 className="w-4 h-4 text-white" />
                                 </div>
                                 {isSidebarOpen && (
@@ -1102,10 +1116,14 @@ export default function Dashboard() {
                         <AnimatePresence>
                             {isTeamDropdownOpen && (
                                 <motion.div
-                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    className="absolute top-full left-0 right-0 mt-2 bg-[#111] border border-[#333] rounded-xl shadow-2xl z-50 overflow-hidden divide-y divide-[#222]"
+                                    initial={{ opacity: 0, x: isSidebarOpen ? 0 : -10, y: isSidebarOpen ? 10 : 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, x: isSidebarOpen ? 0 : -10, y: isSidebarOpen ? 10 : 0, scale: 0.95 }}
+                                    className={`z-50 overflow-hidden divide-y divide-[#222] rounded-xl shadow-2xl bg-[#111] ${
+                                        !isSidebarOpen 
+                                            ? 'absolute left-[calc(100%+12px)] top-0 w-[240px] border border-white/10 backdrop-blur-xl' 
+                                            : 'absolute top-full left-0 right-0 mt-2 border border-[#333]'
+                                    }`}
                                 >
                                     <div className="py-1 max-h-48 overflow-y-auto">
                                         <div className="px-3 py-2 text-xs font-semibold text-[#666] uppercase tracking-wider">Organizations</div>
@@ -1153,10 +1171,10 @@ export default function Dashboard() {
                         <div className="space-y-0.5">
                             <button
                                 onClick={() => setViewState(prevViewStateRef.current)}
-                                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-[#888] hover:text-[#E3E3E3] hover:bg-[#2C2C2C]/30 mb-4"
+                                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-[#888] hover:text-[#E3E3E3] hover:bg-[#2C2C2C]/30 mb-4 ${!isSidebarOpen ? 'justify-center border-b border-[#222] pb-4' : ''}`}
                             >
                                 <ChevronLeft className="w-4 h-4" />
-                                <span className="font-medium">Observability</span>
+                                {isSidebarOpen && <span className="font-medium">Observability</span>}
                             </button>
                             
                             <SidebarItem icon={LayoutIcon} label="Overview" active={obsTab === 'overview'} collapsed={!isSidebarOpen} onClick={() => setObsTab('overview')} />
@@ -1181,10 +1199,10 @@ export default function Dashboard() {
                         <div className="space-y-0.5">
                             <button
                                 onClick={() => setViewState(prevViewStateRef.current)}
-                                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-[#888] hover:text-[#E3E3E3] hover:bg-[#2C2C2C]/30 mb-4"
+                                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-[#888] hover:text-[#E3E3E3] hover:bg-[#2C2C2C]/30 mb-4 ${!isSidebarOpen ? 'justify-center border-b border-[#222] pb-4' : ''}`}
                             >
                                 <ChevronLeft className="w-4 h-4" />
-                                <span className="font-medium">IAM Center</span>
+                                {isSidebarOpen && <span className="font-medium">IAM Center</span>}
                             </button>
                             
                             <SidebarItem icon={Building2} label="Overview" active={true} collapsed={!isSidebarOpen} onClick={() => {}} />
@@ -1196,10 +1214,10 @@ export default function Dashboard() {
                         <div className="space-y-0.5">
                             <button
                                 onClick={() => setViewState(prevViewStateRef.current)}
-                                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-[#888] hover:text-[#E3E3E3] hover:bg-[#2C2C2C]/30 mb-4"
+                                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-[#888] hover:text-[#E3E3E3] hover:bg-[#2C2C2C]/30 mb-4 ${!isSidebarOpen ? 'justify-center border-b border-[#222] pb-4' : ''}`}
                             >
                                 <ChevronLeft className="w-4 h-4" />
-                                <span className="font-medium">Infrastructure</span>
+                                {isSidebarOpen && <span className="font-medium">Infrastructure</span>}
                             </button>
                             
                             <SidebarItem icon={Server} label="Compute Nodes" active={infraTab === 'nodes'} collapsed={!isSidebarOpen} onClick={() => setInfraTab('nodes')} />
@@ -1322,7 +1340,7 @@ export default function Dashboard() {
                 <div className="p-4 border-t border-[#222]">
                     <div 
                         onClick={() => setViewState({ type: 'PROFILE' })}
-                        className="flex items-center gap-3 w-full p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors cursor-pointer group"
+                        className={`flex items-center gap-3 w-full p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors cursor-pointer group ${!isSidebarOpen ? 'justify-center px-0' : ''}`}
                     >
                         <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white ring-2 ring-[#141414] shadow-lg shadow-purple-900/20 group-hover:ring-[#333] transition-all overflow-hidden">
                             {userProfile?.avatarUrl ? (
@@ -1354,7 +1372,7 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        {!['OBSERVABILITY', 'INFRA', 'DELIVERY', 'SECURITY'].includes(viewState.type) && (
+                        {!['OBSERVABILITY', 'INFRA', 'DELIVERY', 'SECURITY', 'PROFILE', 'NOTIFICATIONS'].includes(viewState.type) && (
                             <div className="relative group hidden sm:block">
                                 <Search className="w-4 h-4 text-[#555] absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-[#E3E3E3] transition-colors" />
                                 <input
@@ -1405,7 +1423,7 @@ export default function Dashboard() {
                     ) : (
                         <>
                             {/* Toolbar (Only for Lists) */}
-                            {viewState.type !== 'SERVICE' && viewState.type !== 'GLOBAL' && !['OBSERVABILITY', 'INFRA', 'DELIVERY', 'SECURITY', 'IAM'].includes(viewState.type) && (
+                             {viewState.type !== 'SERVICE' && viewState.type !== 'GLOBAL' && !['OBSERVABILITY', 'INFRA', 'DELIVERY', 'SECURITY', 'IAM', 'PROFILE', 'NOTIFICATIONS'].includes(viewState.type) && (
                                 <ViewToolbar
                                     sortBy={sortBy}
                                     onSortToggle={() => setSortBy(s => s === 'Date' ? 'Name' : 'Date')}

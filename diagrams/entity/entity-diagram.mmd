@@ -1,72 +1,90 @@
 classDiagram
-    LR
-
-    %% Entities
+    direction LR
 
     class User {
         - UUID id
-        - String user_name
+        - String username
         - String email
-        - String password
-        - <<enumeration>>UserRole role
-        - TimeStamp created_at
-        - TimeStamp upadted_at
- }
+        - String passwordHash
+    }
 
-    class Projects {
-        - UUID project_id
-        - String project_name
-        - String owner
-        - String source_location
-        - String source_branch
-        - String source_type
-        - String dockerfile_path
-        - String status
-        - timestamp created_at
-        - timestamp updated_at
- }
-
-    class Builds {
+    class Organization {
         - UUID id
-        - UUID project_id
-        - String build_status
-        - String build_pod_name
-        - String image_tag
-        - String logs
-        - String error_message
-        - timestamp started_at
-        - timestamp completed_at
- }
+        - String name
+        - String slug
+        - UUID ownerId
+    }
 
-
-    class Deployments {
+    class OrgMember {
         - UUID id
-        - UUID project_id
-        - UUID build_id
-        - String image_tag
-        - String service_url
-        - String cpu_limit
-        - String memory_limit
-        - bigint replicas
-        - bigint internal_port
-        - timestamp last_health_check
-        - timestamp deployed_at
-        - String status
- }
+        - UUID userId
+        - UUID organizationId
+        - OrgRole role
+    }
 
-    %% Enumerations
+    class Team {
+        - UUID id
+        - String name
+        - UUID organizationId
+    }
 
-    class UserRole {
-        <<enumeration>>
-        ADMIN
-        USER
- }
+    class TeamMember {
+        - UUID id
+        - UUID userId
+        - UUID teamId
+        - String role
+    }
 
+    class Project {
+        - UUID id
+        - String name
+        - UUID teamId
+        - String k8sNamespace
+    }
 
-    %% Relationships
-     User "1" -- "1..*" Projects : creates
-     Projects "1" --  "1..*" Builds : has
-     Builds "1" *-- "*" Deployments : contains
+    class Application {
+        - UUID id
+        - String name
+        - UUID projectId
+        - String gitRepoUrl
+        - String buildBranch
+        - Integer containerPort
+    }
+
+    class Build {
+        - UUID id
+        - UUID applicationId
+        - BuildStatus status
+        - String imageTag
+    }
+
+    class Deployment {
+        - UUID id
+        - UUID applicationId
+        - String version
+        - DeploymentStatus status
+        - String ingressUrl
+    }
+
+    class DeploymentStage {
+        - UUID id
+        - UUID deploymentId
+        - String name
+        - PipelineStatus status
+    }
+
+    %% Multiplicities based on logically defined relationships
+    User "1" -- "*" OrgMember
+    Organization "1" -- "*" OrgMember
+    Organization "1" -- "*" Team
+    Team "1" -- "*" TeamMember
+    User "1" -- "*" TeamMember
+    Team "1" -- "*" Project
+    Project "1" -- "*" Application
+    Application "1" -- "*" Build
+    Application "1" -- "0..1" Deployment
+    Build "1" -- "0..1" Deployment
+    Deployment "1" *-- "*" DeploymentStage
 
 
 

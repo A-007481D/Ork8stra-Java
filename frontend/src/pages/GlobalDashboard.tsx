@@ -270,7 +270,7 @@ export default function GlobalDashboard({ org }: GlobalDashboardProps) {
                                     <p className="text-sm italic font-medium">No clusters mapped to hierarchy.</p>
                                 </div>
                             ) : (
-                                <div className="space-y-6 h-[280px] flex flex-col justify-center">
+                                <div className="space-y-6 min-h-[280px] flex flex-col pt-2">
                                     {projects.slice(0, 5).map(project => {
                                         const count = services.filter(s => s.project_id === project.id).length;
                                         const maxCount = Math.max(...projects.map(p => services.filter(s => s.project_id === p.id).length), 1);

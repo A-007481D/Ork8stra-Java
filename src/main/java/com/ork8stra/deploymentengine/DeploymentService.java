@@ -107,6 +107,7 @@ public class DeploymentService {
                                 .status(DeploymentStage.PipelineStatus.SUCCESS)
                                 .orderIndex(0)
                                 .deployment(deployment)
+                                .estimatedDuration(30L)
                                 .build();
                 // We assume compilation happened before this if we have an imageTag, 
                 // but real build monitoring should happen in BuildService.
@@ -119,6 +120,7 @@ public class DeploymentService {
                                 .status(DeploymentStage.PipelineStatus.SUCCESS)
                                 .orderIndex(1)
                                 .deployment(deployment)
+                                .estimatedDuration(60L)
                                 .build();
                 testStage.getSteps().add(DeploymentStep.builder().name("Cluster Policy Check").status(DeploymentStage.PipelineStatus.SUCCESS).build());
 
@@ -128,6 +130,7 @@ public class DeploymentService {
                                 .status(DeploymentStage.PipelineStatus.PENDING)
                                 .orderIndex(2)
                                 .deployment(deployment)
+                                .estimatedDuration(120L)
                                 .build();
                 deployStage.getSteps().add(DeploymentStep.builder().name("K8s Apply").status(DeploymentStage.PipelineStatus.PENDING).build());
                 deployStage.getSteps().add(DeploymentStep.builder().name("Health Check").status(DeploymentStage.PipelineStatus.PENDING).build());

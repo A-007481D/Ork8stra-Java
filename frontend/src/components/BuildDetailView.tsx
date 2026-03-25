@@ -3,16 +3,19 @@ import { motion } from 'framer-motion';
 import { X, Maximize2, Terminal as TerminalIcon, Layout, ChevronDown, ChevronUp } from 'lucide-react';
 import PipelineWorkflow from './PipelineWorkflow';
 import LogViewer from './LogViewer';
+import { Badge } from './ui/Badge';
 
 interface BuildDetailViewProps {
   deploymentId: string;
   appId: string;
   token: string;
   onClose: () => void;
+  type?: 'build' | 'deployment';
 }
 
-const BuildDetailView = ({ deploymentId, appId, token, onClose }: BuildDetailViewProps) => {
+const BuildDetailView = ({ deploymentId, appId, token, onClose, type: initialType = 'deployment' }: BuildDetailViewProps) => {
   const [deployment, setDeployment] = useState<any>(null);
+  const [viewType, setViewType] = useState<'build' | 'deployment'>(initialType);
   const [activeStageId, setActiveStageId] = useState<string | null>(null);
   const [logsExpanded, setLogsExpanded] = useState(true);
   const [viewMode, setViewMode] = useState<'split' | 'graph' | 'logs'>('split');
@@ -24,15 +27,48 @@ const BuildDetailView = ({ deploymentId, appId, token, onClose }: BuildDetailVie
     const controller = new AbortController();
 
     // Initial fetch
-    fetch(`/api/v1/apps/${appId}/deployments/${deploymentId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal
-    })
-    .then(r => r.json())
-    .then(setDeployment)
-    .catch(err => {
-        if (err.name !== 'AbortError') console.error("Fetch Deployment Error:", err);
-    });
+    const fetchData = async () => {
+        try {
+            const url = viewType === 'build' 
+                ? `/api/v1/apps/${appId}/build/${deploymentId}`
+                : `/api/v1/apps/${appId}/deployments/${deploymentId}`;
+
+            const res = await fetch(url, {
+                headers: { Authorization: `Bearer ${token}` },
+                signal: controller.signal
+            });
+
+            if (res.status === 400 && viewType === 'deployment') {
+                // Fallback to build if deployment not found
+                console.warn("Deployment not found, falling back to build view");
+                setViewType('build');
+                return;
+            }
+
+            if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+            
+            const data = await res.json();
+            
+            // If it's a build, mock the stages for the DAG
+            if (viewType === 'build' && (!data.stages || data.stages.length === 0)) {
+                data.stages = [{
+                    id: 'build-stage',
+                    name: 'Source Compilation',
+                    status: data.status === 'RUNNING' ? 'RUNNING' : (data.status === 'SUCCESS' ? 'SUCCESS' : 'FAILED'),
+                    startTime: data.startTime,
+                    endTime: data.endTime,
+                    estimatedDuration: 120, // 2 minutes for a typical build
+                    steps: [{ name: 'Nixpacks Build', status: data.status }]
+                }];
+            }
+            
+            setDeployment(data);
+        } catch (err: any) {
+            if (err.name !== 'AbortError') console.error("Fetch Data Error:", err);
+        }
+    };
+
+    fetchData();
 
     // Custom SSE via FETCH to support Authorization header
     const streamEvents = async () => {
@@ -58,16 +94,24 @@ const BuildDetailView = ({ deploymentId, appId, token, onClose }: BuildDetailVie
                 buffer = parts.pop() || "";
 
                 for (const part of parts) {
-                    if (part.startsWith("event: pipeline-update")) {
-                        const dataLine = part.split("\n").find(l => l.startsWith("data: "));
-                        if (dataLine) {
-                            try {
-                                const updatedDeployment = JSON.parse(dataLine.substring(6));
-                                setDeployment(updatedDeployment);
-                            } catch (e) {
-                                console.error("Failed to parse pipeline event:", e);
-                            }
+                    if (!part.trim()) continue;
+                    
+                    const eventMatch = part.match(/^event:\s*(.+)$/m);
+                    const dataMatch = part.match(/^data:\s*(.+)$/m);
+                    
+                    if (eventMatch && eventMatch[1] === 'pipeline-update' && dataMatch) {
+                        try {
+                            const updatedDeployment = JSON.parse(dataMatch[1]);
+                            setDeployment(updatedDeployment);
+                        } catch (e) {
+                            console.error("Failed to parse pipeline event data:", e);
                         }
+                    } else if (!eventMatch && dataMatch) {
+                         // Default message event
+                        try {
+                            const data = JSON.parse(dataMatch[1]);
+                            setDeployment(data);
+                        } catch (e) { /* ignore raw strings */ }
                     }
                 }
             }
@@ -79,7 +123,7 @@ const BuildDetailView = ({ deploymentId, appId, token, onClose }: BuildDetailVie
     streamEvents();
 
     return () => controller.abort();
-  }, [deploymentId, appId, token]);
+  }, [deploymentId, appId, token, viewType]);
 
   const handleStageClick = useCallback((stageId: string) => {
     setActiveStageId(stageId);
@@ -103,15 +147,19 @@ const BuildDetailView = ({ deploymentId, appId, token, onClose }: BuildDetailVie
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-[#15171C]/50">
           <div className="flex items-center gap-4">
-            <div className={`w-3 h-3 rounded-full ${
-              deployment.status === 'HEALTHY' ? 'bg-emerald-500' : 
-              deployment.status === 'FAILED' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'
-            }`} />
+              <Badge className={
+                (deployment.status === 'HEALTHY' || deployment.status === 'SUCCESS' || deployment.status === 'SUCCESSFUL') ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                (deployment.status === 'RUNNING' || deployment.status === 'PENDING' || deployment.status === 'IN_PROGRESS' || deployment.status === 'RESTARTING') ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 animate-pulse' :
+                (deployment.status === 'STOPPED') ? 'bg-slate-500/20 text-slate-400 border-slate-500/30' :
+                'bg-red-500/20 text-red-400 border-red-500/30'
+              }>
+                {deployment.status}
+              </Badge>
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 Pipeline Execution <span className="text-slate-500 font-mono text-sm">#{deploymentId.substring(0, 8)}</span>
               </h2>
-              <p className="text-xs text-slate-400">Target Image: <span className="font-mono">{deployment.imageTag || 'Pending...'}</span></p>
+              <p className="text-xs text-slate-400">Target Image: <span className="font-mono">{deployment.imageTag || deployment.version || 'Pending...'}</span></p>
             </div>
           </div>
           
@@ -183,6 +231,7 @@ const BuildDetailView = ({ deploymentId, appId, token, onClose }: BuildDetailVie
                   onClose={() => setViewMode('graph')}
                   token={token}
                   isEmbedded={true}
+                  type={viewType}
                 />
               </div>
             </div>

@@ -2,143 +2,164 @@ classDiagram
     direction TB
 
     %% ============================================
-    %% ORGANIZATION & USERS
+    %% ORGANIZATION & USERS (IDENTITY MODULE)
     %% ============================================
+
+    class User {
+        +UUID id
+        +String username
+        +String email
+        +String passwordHash
+        +Set~PlatformRole~ roles
+        +String displayName
+        +String avatarUrl
+        +String githubUsername
+        +boolean enabled
+        +Instant createdAt
+        +Instant updatedAt
+    }
 
     class Organization {
         +UUID id
         +String name
         +String slug
+        +UUID ownerId
         +Instant createdAt
     }
 
-    class User {
+    class OrgMember {
         +UUID id
-        +String email
-        +String passwordHash
-        +PlatformRole platformRole
-        +Instant createdAt
-    }
-
-    class OrganizationMembership {
         +UUID userId
         +UUID organizationId
         +OrgRole role
+        +List~UUID~ policyIds
         +Instant joinedAt
     }
 
-    class PlatformRole {
-        <<enumeration>>
-        ADMIN
-        USER
-    }
-
-    class OrgRole {
-        <<enumeration>>
-        OWNER
-        MEMBER
-        VIEWER
-    }
-
     %% ============================================
-    %% PROJECTS & APPLICATIONS
+    %% PROJECTS & TEAMS (GOVERNANCE MODULE)
     %% ============================================
 
-    class Project {
+    class Team {
         +UUID id
-        +UUID organizationId
         +String name
-        +String slug
-        +String k8sNamespace
-        +ProjectStatus status
+        +UUID organizationId
         +Instant createdAt
     }
 
+    class TeamMember {
+        +UUID id
+        +UUID userId
+        +UUID teamId
+        +String role
+        +List~UUID~ policyIds
+        +Instant joinedAt
+    }
+
+    class Project {
+        +UUID id
+        +String name
+        +UUID teamId
+        +String k8sNamespace
+        +Instant createdAt
+        +Instant updatedAt
+    }
+
+    %% ============================================
+    %% APPLICATIONS & BUILDING (MANAGEMENT MODULE)
+    %% ============================================
+
     class Application {
         +UUID id
-        +UUID projectId
         +String name
+        +UUID projectId
         +String gitRepoUrl
-        +String branch
+        +String buildBranch
         +String dockerfilePath
-        +int internalPort
+        +String startCommand
+        +Integer containerPort
         +Map~String,String~ envVars
-        +AppStatus status
     }
 
-    class ProjectStatus {
-        <<enumeration>>
-        ACTIVE
-        SUSPENDED
+    class ServiceConnection {
+        +UUID id
+        +UUID sourceAppId
+        +UUID targetAppId
+        +String metadata
     }
-
-    class AppStatus {
-        <<enumeration>>
-        CREATED
-        BUILDING
-        DEPLOYED
-        FAILED
-    }
-
-    %% ============================================
-    %% BUILDS & DEPLOYMENTS
-    %% ============================================
 
     class Build {
         +UUID id
         +UUID applicationId
         +String commitHash
-        +String imageTag
-        +String kanikoPodName
         +BuildStatus status
-        +String errorMessage
-        +Instant startedAt
-        +Instant completedAt
+        +String imageTag
+        +String jobName
+        +Instant startTime
+        +Instant endTime
     }
+
+    %% ============================================
+    %% DEPLOYMENTS & RUNTIME (ORCHESTRATION MODULE)
+    %% ============================================
 
     class Deployment {
         +UUID id
         +UUID applicationId
-        +UUID buildId
-        +String imageTag
-        +String ingressUrl
+        +String version
         +int replicas
         +DeploymentStatus status
+        +String ingressUrl
         +Instant deployedAt
     }
 
-    class BuildStatus {
-        <<enumeration>>
-        QUEUED
-        BUILDING
-        PUSHING
-        SUCCESS
-        FAILED
+    class DeploymentStage {
+        +UUID id
+        +String name
+        +PipelineStatus status
+        +int orderIndex
+        +Long estimatedDuration
+        +Instant startTime
+        +Instant endTime
     }
 
-    class DeploymentStatus {
-        <<enumeration>>
-        PENDING
-        HEALTHY
-        UNHEALTHY
-        FAILED
+    class DeploymentStep {
+        +UUID id
+        +String name
+        +PipelineStatus status
+        +String logSnippet
+        +Instant timestamp
     }
 
     %% ============================================
-    %% RELATIONSHIPS
+    %% STRICT RELATIONSHIPS & MULTIPLICITIES
     %% ============================================
 
-    Organization "1" --> "*" OrganizationMembership : has
-    User "1" --> "*" OrganizationMembership : joins
-    Organization "1" --> "*" Project : owns
-    Project "1" --> "*" Application : contains
-    Application "1" --> "*" Build : triggers
-    Application "1" --> "0..1" Deployment : current
-    Build "1" --> "0..1" Deployment : produces
+    User "1" -- "*" OrgMember : is member of
+    Organization "1" -- "*" OrgMember : contains
+    
+    Organization "1" -- "*" Team : owns
+    
+    User "1" -- "*" TeamMember : is member of
+    Team "1" -- "*" TeamMember : contains
+    
+    Team "1" -- "*" Project : manages
+    Project "1" -- "*" Application : hosts
 
-    User ..> PlatformRole
-    OrganizationMembership ..> OrgRole
-    Project ..> ProjectStatus
-    Application ..> AppStatus
-    Build ..> BuildStatus
-    Deployment ..> DeploymentStatus
+    Application "1" -- "*" ServiceConnection : source
+    Application "1" -- "*" ServiceConnection : target
+
+    Application "1" -- "*" Build : triggers
+    Application "1" -- "0..1" Deployment : has current
+    
+    Build "1" -- "0..1" Deployment : produces
+    
+    Deployment "1" *-- "*" DeploymentStage : composition
+    DeploymentStage "1" *-- "*" DeploymentStep : composition
+
+    %% Metadata Enums
+    class PlatformRole { <<enumeration>> ADMIN, USER }
+    class OrgRole { <<enumeration>> OWNER, MEMBER, VIEWER }
+    class BuildStatus { <<enumeration>> PENDING, RUNNING, SUCCESS, FAILED, CANCELLED }
+    class DeploymentStatus { <<enumeration>> IN_PROGRESS, HEALTHY, UNHEALTHY, FAILED, STOPPED, RESTARTING }
+    class PipelineStatus { <<enumeration>> PENDING, RUNNING, SUCCESS, FAILED, SKIPPED }
