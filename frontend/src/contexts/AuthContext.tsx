@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Protect routes
     useEffect(() => {
         if (!isLoading) {
-            const publicRoutes = ['/login', '/register'];
+            const publicRoutes = ['/', '/login', '/register'];
             if (!token && !publicRoutes.includes(location.pathname)) {
                 navigate('/login');
             } else if (token && publicRoutes.includes(location.pathname)) {

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import Login from './Login';
@@ -8,6 +8,7 @@ import Dashboard from './Dashboard';
 import Projects from './Projects';
 import JoinOrg from './JoinOrg';
 import AcceptInvitation from './pages/AcceptInvitation';
+import LandingPage from './components/LandingPage';
 import Layout from './Layout';
 
 function App() {
@@ -16,7 +17,7 @@ function App() {
       <AuthProvider>
         <ToastProvider>
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/join/org/:token" element={<JoinOrg />} />

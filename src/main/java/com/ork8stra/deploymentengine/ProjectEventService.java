@@ -42,22 +42,33 @@ public class ProjectEventService {
     }
 
     private void startGlobalWatcher() {
-        kubernetesClient.v1().events().inAnyNamespace().watch(new Watcher<Event>() {
-            @Override
-            public void eventReceived(Action action, Event event) {
-                if (event.getMetadata().getNamespace().startsWith("project")) {
-                    handleEvent(event);
+        try {
+            var v1 = kubernetesClient.v1();
+            if (v1 == null) return;
+            var events = v1.events();
+            if (events == null) return;
+            var inAnyNamespace = events.inAnyNamespace();
+            if (inAnyNamespace == null) return;
+            
+            inAnyNamespace.watch(new Watcher<Event>() {
+                @Override
+                public void eventReceived(Action action, Event event) {
+                    if (event.getMetadata().getNamespace().startsWith("project")) {
+                        handleEvent(event);
+                    }
                 }
-            }
 
-            @Override
-            public void onClose(WatcherException cause) {
-                if (cause != null) {
-                    log.error("Global Event Watcher closed with error, restarting...", cause);
-                    startGlobalWatcher();
+                @Override
+                public void onClose(WatcherException cause) {
+                    if (cause != null) {
+                        log.error("Global Event Watcher closed with error, restarting...", cause);
+                        startGlobalWatcher();
+                    }
                 }
-            }
-        });
+            });
+        } catch (Exception e) {
+            log.warn("Could not start Global Event Watcher (cluster may be unreachable): {}", e.getMessage());
+        }
     }
 
     private void handleEvent(Event event) {

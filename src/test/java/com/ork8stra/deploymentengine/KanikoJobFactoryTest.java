@@ -7,14 +7,16 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Answers;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class KanikoJobFactoryTest {
 
@@ -24,8 +26,21 @@ class KanikoJobFactoryTest {
 
     @BeforeEach
     void setUp() {
-        kubernetesClient = mock(KubernetesClient.class, Answers.RETURNS_DEEP_STUBS);
+        kubernetesClient = mock(KubernetesClient.class);
         projectService = mock(ProjectService.class);
+        
+        // Mock the PVC chain to avoid NPE in ensureCachingPvcs
+        var pvcOps = mock(io.fabric8.kubernetes.client.dsl.MixedOperation.class);
+        var nsOps = mock(io.fabric8.kubernetes.client.dsl.NonNamespaceOperation.class);
+        var resOps = mock(io.fabric8.kubernetes.client.dsl.Resource.class);
+        
+        when(kubernetesClient.persistentVolumeClaims()).thenReturn(pvcOps);
+        when(pvcOps.inNamespace(anyString())).thenReturn(nsOps);
+        when(nsOps.withName(anyString())).thenReturn(resOps);
+        when(nsOps.resource(any())).thenReturn(resOps);
+        when(resOps.get()).thenReturn(null); // Simulate PVC not existing, which triggers creation
+        when(resOps.create()).thenReturn(null); // Avoid NPE on .create()
+
         factory = new KanikoJobFactory(kubernetesClient, projectService);
     }
 
@@ -45,11 +60,11 @@ class KanikoJobFactoryTest {
         assertTrue(args.stream().anyMatch(arg -> arg.contains("--dockerfile=/workspace/.ork8stra.auto.Dockerfile")));
 
         String nixpacksInitImage = job.getSpec().getTemplate().getSpec().getInitContainers().get(1).getImage();
-        assertTrue(nixpacksInitImage.contains("nixpacks"));
+        assertTrue(nixpacksInitImage.contains("ubuntu"));
 
         String initScript = job.getSpec().getTemplate().getSpec().getInitContainers().get(1).getCommand().get(2);
-        assertTrue(initScript.contains("command -v nixpacks"));
-        assertTrue(initScript.contains("elif [ -f \"$TARGET_DIR/package.json\" ]"));
+        assertTrue(initScript.contains("nixpacks build"));
+        assertTrue(initScript.contains("--out \"$TARGET_DIR\""));
     }
 
     @Test
@@ -88,9 +103,9 @@ class KanikoJobFactoryTest {
         assertTrue(args.stream().anyMatch(arg -> arg.contains("--dockerfile=/workspace/.ork8stra.auto.Dockerfile")));
 
         String nixpacksInitImage = job.getSpec().getTemplate().getSpec().getInitContainers().get(1).getImage();
-        assertTrue(nixpacksInitImage.contains("nixpacks"));
+        assertTrue(nixpacksInitImage.contains("ubuntu"));
 
         String initScript = job.getSpec().getTemplate().getSpec().getInitContainers().get(1).getCommand().get(2);
-        assertTrue(initScript.contains("command -v nixpacks"));
+        assertTrue(initScript.contains("nixpacks build"));
     }
 }

@@ -29,47 +29,57 @@ public class KanikoJobWatcher {
         // Reconcile any builds that completed while the backend was down
         reconcileOnStartup();
 
-        watch = kubernetesClient.batch().v1().jobs()
-                .inAnyNamespace()
-                .withLabel("managed-by", "ork8stra")
-                .withLabel("job-type", "build")
-                .watch(new Watcher<>() {
-                    @Override
-                    public void eventReceived(Action action, Job job) {
-                        if (action != Action.MODIFIED && action != Action.ADDED) {
-                            return;
+        try {
+            var batch = kubernetesClient.batch();
+            if (batch == null) return;
+            var v1 = batch.v1();
+            if (v1 == null) return;
+            var jobs = v1.jobs();
+            if (jobs == null) return;
+            
+            watch = jobs.inAnyNamespace()
+                    .withLabel("managed-by", "ork8stra")
+                    .withLabel("job-type", "build")
+                    .watch(new Watcher<>() {
+                        @Override
+                        public void eventReceived(Action action, Job job) {
+                            if (action != Action.MODIFIED && action != Action.ADDED) {
+                                return;
+                            }
+
+                            var status = job.getStatus();
+                            if (status == null)
+                                return;
+
+                            String buildIdStr = job.getMetadata().getAnnotations() != null
+                                    ? job.getMetadata().getAnnotations().get("ork8stra.com/build-id")
+                                    : null;
+
+                            if (buildIdStr == null)
+                                return;
+
+                            UUID buildId = UUID.fromString(buildIdStr);
+
+                            if (status.getSucceeded() != null && status.getSucceeded() > 0) {
+                                log.info("Build Job '{}' succeeded", job.getMetadata().getName());
+                                String imageTag = extractImageTag(job);
+                                updateIfRunning(buildId, BuildStatus.SUCCESS, imageTag);
+                            } else if (status.getFailed() != null && status.getFailed() > 0) {
+                                log.warn("Build Job '{}' failed", job.getMetadata().getName());
+                                updateIfRunning(buildId, BuildStatus.FAILED, null);
+                            }
                         }
 
-                        var status = job.getStatus();
-                        if (status == null)
-                            return;
-
-                        String buildIdStr = job.getMetadata().getAnnotations() != null
-                                ? job.getMetadata().getAnnotations().get("ork8stra.com/build-id")
-                                : null;
-
-                        if (buildIdStr == null)
-                            return;
-
-                        UUID buildId = UUID.fromString(buildIdStr);
-
-                        if (status.getSucceeded() != null && status.getSucceeded() > 0) {
-                            log.info("Build Job '{}' succeeded", job.getMetadata().getName());
-                            String imageTag = extractImageTag(job);
-                            updateIfRunning(buildId, BuildStatus.SUCCESS, imageTag);
-                        } else if (status.getFailed() != null && status.getFailed() > 0) {
-                            log.warn("Build Job '{}' failed", job.getMetadata().getName());
-                            updateIfRunning(buildId, BuildStatus.FAILED, null);
+                        @Override
+                        public void onClose(WatcherException e) {
+                            if (e != null) {
+                                log.error("Kaniko Job Watcher closed unexpectedly", e);
+                            }
                         }
-                    }
-
-                    @Override
-                    public void onClose(WatcherException e) {
-                        if (e != null) {
-                            log.error("Kaniko Job Watcher closed unexpectedly", e);
-                        }
-                    }
-                });
+                    });
+        } catch (Exception e) {
+            log.warn("Could not start Kaniko Job Watcher (cluster may be unreachable): {}", e.getMessage());
+        }
     }
 
     private void reconcileOnStartup() {

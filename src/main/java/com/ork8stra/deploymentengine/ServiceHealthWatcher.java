@@ -25,7 +25,7 @@ public class ServiceHealthWatcher {
     private Watch watch;
 
     @org.springframework.beans.factory.annotation.Autowired
-    public void setSelf(ServiceHealthWatcher self) {
+    public void setSelf(@org.springframework.context.annotation.Lazy ServiceHealthWatcher self) {
         this.self = self;
     }
 
@@ -36,26 +36,36 @@ public class ServiceHealthWatcher {
     }
 
     private void startWatching() {
-        watch = kubernetesClient.apps().deployments().inAnyNamespace()
-                .withLabel("managed-by", "ork8stra")
-                .watch(new Watcher<Deployment>() {
-                    @Override
-                    public void eventReceived(Action action, Deployment resource) {
-                        if (action == Action.MODIFIED || action == Action.ADDED) {
-                            self.reconcileStatus(resource);
-                        }
-                    }
+        try {
+            var apps = kubernetesClient.apps();
+            if (apps == null) return;
+            var deployments = apps.deployments();
+            if (deployments == null) return;
+            var inAnyNamespace = deployments.inAnyNamespace();
+            if (inAnyNamespace == null) return;
 
-                    @Override
-                    public void onClose(WatcherException e) {
-                        if (e != null) {
-                            log.error("Service Health Watcher closed with error", e);
-                            // Simple retry after 5 seconds
-                            try { Thread.sleep(5000); } catch (InterruptedException ignore) {}
-                            startWatching();
+            watch = inAnyNamespace.withLabel("managed-by", "ork8stra")
+                    .watch(new Watcher<Deployment>() {
+                        @Override
+                        public void eventReceived(Action action, Deployment resource) {
+                            if (action == Action.MODIFIED || action == Action.ADDED) {
+                                self.reconcileStatus(resource);
+                            }
                         }
-                    }
-                });
+
+                        @Override
+                        public void onClose(WatcherException e) {
+                            if (e != null) {
+                                log.error("Service Health Watcher closed with error", e);
+                                // Simple retry after 5 seconds
+                                try { Thread.sleep(5000); } catch (InterruptedException ignore) {}
+                                startWatching();
+                            }
+                        }
+                    });
+        } catch (Exception e) {
+            log.warn("Could not start Service Health Watcher (cluster may be unreachable): {}", e.getMessage());
+        }
     }
 
     @Transactional
