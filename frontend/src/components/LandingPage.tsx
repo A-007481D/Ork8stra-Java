@@ -2,9 +2,7 @@
 
 
 import { motion } from "framer-motion";
-import { Globe, BarChart3, Lock, LayoutGrid } from "lucide-react";
 import { Link } from "react-router-dom";
-import DashboardPreview from "./DashboardPreview";
 import CommandPalette from "./CommandPalette";
 import Navbar from "./Navbar";
 
@@ -13,206 +11,145 @@ export default function LandingPage() {
         <div className="min-h-screen w-full bg-[#050505] text-white font-sans selection:bg-blue-500/30 overflow-x-hidden">
             <Navbar />
 
-            {/* Background Decor */}
-            <div className="fixed inset-0 pointer-events-none z-0">
-                <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/5 blur-[120px] rounded-full" />
-                <div className="absolute inset-0 bg-grid-white opacity-40 mix-blend-overlay" />
-            </div>
-
             {/* ---------------------------------------------------------------------------
-          HERO SECTION: COMMAND PALETTE FIRST
+          HERO SECTION: REDUCED TO ESSENTIALS
           --------------------------------------------------------------------------- */}
-            <section className="relative pt-48 pb-32 px-6 max-w-[1200px] mx-auto flex flex-col items-center text-center z-10">
+            <section className="relative pt-64 pb-48 px-6 max-w-[1000px] mx-auto text-center z-10">
                 <motion.div 
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.8 }}
                 >
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-slate-500 text-[10px] font-bold tracking-widest uppercase mb-8">
-                        The Cloud Platform for Professionals
-                    </div>
-                    <h1 className="text-6xl md:text-8xl font-bold tracking-tight text-white mb-8">
-                        Deploy in <span className="text-slate-400">Seconds.</span>
+                    <h1 className="text-7xl md:text-9xl font-bold tracking-tight text-white mb-10">
+                        Click, click, <span className="text-slate-700">done.</span>
                     </h1>
-                    <p className="text-slate-500 text-lg max-w-xl mx-auto mb-16 leading-relaxed">
-                        KubeLite is the unified control plane for modern engineering teams. 
-                        Automate the lifecycle of your entire fleet with a single interface.
-                    </p>
                 </motion.div>
 
-                {/* The Interactive Command Palette */}
+                {/* Simplified Command Palette as a discrete bar */}
                 <motion.div
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.2, duration: 0.5 }}
-                    className="w-full mb-32"
+                    className="max-w-xl mx-auto mb-40"
                 >
                     <CommandPalette />
                 </motion.div>
             </section>
 
             {/* ---------------------------------------------------------------------------
-          SECTION 1: THE UNIFIED CONTROL PLANE
+          PRO PLATFORM WORKFLOW (RENDER-INSPIRED)
           --------------------------------------------------------------------------- */}
-            <section className="relative py-40 px-6 max-w-[1200px] mx-auto z-10 border-t border-white/5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-24 items-center">
+            <section className="relative pb-64 px-6 max-w-[1200px] mx-auto z-10">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-16 lg:gap-8">
+                    
+                    {/* STEP 1: DEFINE */}
                     <div className="space-y-8">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">
-                            Operational Excellence
+                        <div className="flex items-center gap-4">
+                            <div className="w-8 h-8 rounded-md bg-purple-600 flex items-center justify-center font-bold text-sm">1</div>
+                            <h3 className="text-2xl font-bold">Select a service</h3>
                         </div>
-                        <h2 className="text-5xl font-bold tracking-tight leading-[1.1]">The Unified <br />Control Plane.</h2>
-                        <p className="text-slate-400 text-xl leading-relaxed font-light">
-                            Manage your entire infrastructure fleet from a single, high-fidelity 
-                            interface. Orchestrate deployments, scale resources, and monitor 
-                            health without ever context-switching.
+                        <p className="text-slate-500 text-lg leading-relaxed">
+                            Choose what you need to run your apps, APIs, workers, or scheduled tasks.
                         </p>
-                        <div className="grid grid-cols-1 gap-6 pt-4">
-                            <div className="flex gap-4 items-start">
-                                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20">
-                                    <LayoutGrid className="w-5 h-5 text-blue-400" />
+                        <div className="p-4 bg-[#0A0A0A] rounded-xl border border-white/5 space-y-1">
+                            {[
+                                { name: 'Static site', active: false },
+                                { name: 'Web service', active: true },
+                                { name: 'Private service', active: false },
+                                { name: 'Background Worker', active: false },
+                                { name: 'Cron Job', active: false }
+                            ].map((item) => (
+                                <div key={item.name} className={`px-4 py-3 rounded-lg flex items-center justify-between transition-colors ${item.active ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'text-slate-500 hover:bg-white/5'}`}>
+                                    <span className="text-sm font-medium">{item.name}</span>
+                                    {item.active && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
                                 </div>
-                                <div>
-                                    <div className="text-white font-semibold mb-1">Global Visibility</div>
-                                    <div className="text-sm text-slate-500 leading-relaxed text-pretty">Instant access to every environment, project, and service across your entire organization.</div>
-                                </div>
-                            </div>
-                            <div className="flex gap-4 items-start">
-                                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
-                                    <Globe className="w-5 h-5 text-emerald-400" />
-                                </div>
-                                <div>
-                                    <div className="text-white font-semibold mb-1">Edge Provisioning</div>
-                                    <div className="text-sm text-slate-500 leading-relaxed text-pretty">Automatic traffic routing and certificate management as soon as your service is live.</div>
-                                </div>
-                            </div>
+                            ))}
                         </div>
                     </div>
-                    {/* Visual: Clean Operation Graph */}
-                    <div className="relative p-1 glass rounded-[40px] border border-white/10 shadow-2xl overflow-hidden group">
-                        <div className="bg-[#050505] rounded-[39px] p-8 space-y-12 h-[450px] relative overflow-hidden">
-                            <div className="flex justify-between items-center">
-                                <div className="flex gap-2">
-                                  {[...Array(3)].map((_, i) => (
-                                    <div key={i} className="w-2 h-2 rounded-full bg-white/10" />
-                                  ))}
-                                </div>
-                                <div className="text-[10px] text-slate-600 font-mono tracking-widest uppercase">system_status: optimal</div>
-                            </div>
-                            
-                            <div className="flex flex-col items-center justify-center h-full -mt-10 gap-16">
-                                <div className="relative">
-                                    <div className="w-24 h-24 rounded-3xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center relative z-10">
-                                        <div className="w-12 h-12 rounded-xl bg-blue-500 animate-pulse shadow-[0_0_30px_rgba(59,130,246,0.5)]" />
-                                    </div>
-                                    {/* Orbital rings */}
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full border border-white/5" />
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full border border-white/5 opacity-50" />
-                                </div>
-                                
-                                <div className="grid grid-cols-4 gap-4 w-full px-4">
-                                     {[...Array(4)].map((_, i) => (
-                                        <div key={i} className="h-1 rounded-full bg-white/5 relative overflow-hidden">
-                                            <motion.div 
-                                                className="absolute inset-0 bg-blue-500/50"
-                                                initial={{ left: '-100%' }}
-                                                animate={{ left: '100%' }}
-                                                transition={{ repeat: Infinity, duration: 2, delay: i * 0.5, ease: "linear" }}
-                                            />
-                                        </div>
-                                     ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
-            {/* ---------------------------------------------------------------------------
-          SECTION 2: INSTANT ENVIRONMENTS
-          --------------------------------------------------------------------------- */}
-            <section className="relative py-40 px-6 max-w-[1200px] mx-auto z-10">
-                <div className="text-center mb-24 space-y-6">
-                    <h2 className="text-5xl font-bold tracking-tight">Instant Previews. <br />Every time.</h2>
-                    <p className="text-slate-500 max-w-2xl mx-auto text-lg leading-relaxed font-light">
-                        Eliminate manual staging. Every branch, every pull request, and every 
-                        deployment gets an isolated, ephemeral environment automatically.
-                    </p>
-                </div>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="p-10 glass rounded-3xl border border-white/10 hover:border-white/20 transition-all group">
-                         <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-6 font-mono text-sm">01</div>
-                         <h4 className="text-xl font-bold mb-4 text-white">Push to Branch</h4>
-                         <p className="text-slate-500 text-sm leading-relaxed">Simply push your changes to your collaborative workflow. We detect the intent and begin the lifecycle.</p>
-                    </div>
-                    <div className="p-10 glass rounded-3xl border border-white/10 hover:border-white/20 transition-all group">
-                         <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-6 font-mono text-sm">02</div>
-                         <h4 className="text-xl font-bold mb-4 text-white">Automatic Build</h4>
-                         <p className="text-slate-500 text-sm leading-relaxed">Changes are validated and packaged securely behind the scenes. No infrastructure management required.</p>
-                    </div>
-                    <div className="p-10 glass rounded-3xl border border-white/10 hover:border-white/20 transition-all group">
-                         <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-6 font-mono text-sm">03</div>
-                         <h4 className="text-xl font-bold mb-4 text-white">Live URL</h4>
-                         <p className="text-slate-500 text-sm leading-relaxed">Receive a public, SSL-secured preview URL instantly. Share with stakeholders and get feedback immediately.</p>
-                    </div>
-                </div>
-            </section>
-
-            {/* ---------------------------------------------------------------------------
-          SECTION 3: INTEGRATED INSIGHTS (OBSERVABILITY)
-          --------------------------------------------------------------------------- */}
-            <section className="relative py-40 px-6 max-w-[1200px] mx-auto z-10 bg-[#020202]/50">
-                <div className="flex flex-col lg:flex-row gap-20 items-center">
-                    <div className="lg:w-1/2">
-                         <div className="relative glass rounded-[40px] border border-white/10 shadow-[0_0_100px_-40px_rgba(59,130,246,0.3)] overflow-hidden p-2">
-                            <DashboardPreview />
+                    {/* STEP 2: DEPLOY */}
+                    <div className="space-y-8">
+                        <div className="flex items-center gap-4">
+                            <div className="w-8 h-8 rounded-md bg-purple-600 flex items-center justify-center font-bold text-sm">2</div>
+                            <h3 className="text-2xl font-bold">Deploy your code</h3>
                         </div>
-                    </div>
-                    <div className="lg:w-1/2 space-y-8">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-bold tracking-[0.2em] uppercase">
-                            Deep Insights
-                        </div>
-                        <h2 className="text-5xl font-bold tracking-tight leading-[1.1]">Integrated <br />Observability.</h2>
-                        <p className="text-slate-400 text-xl leading-relaxed font-light">
-                            Stop installing agents and configuring dashboards. Real-time metrics 
-                            and logs are built into the platform core, providing immediate 
-                            visibility into every service.
+                        <p className="text-slate-500 text-lg leading-relaxed">
+                            Connect your repository. We build and deploy on the right runtime.
                         </p>
-                        <div className="space-y-6 pt-4">
-                            <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-                                <div className="text-white font-bold mb-2 flex items-center gap-2">
-                                    <BarChart3 className="w-4 h-4 text-blue-400" />
-                                    Resource Intelligence
+                        <div className="p-6 bg-[#0A0A0A] rounded-xl border border-white/5 space-y-6 font-mono text-[11px]">
+                             <div className="space-y-3">
+                                <div className="flex justify-between border-b border-white/5 pb-2">
+                                    <span className="text-slate-600 uppercase">Branch</span>
+                                    <span className="text-slate-300">main</span>
                                 </div>
-                                <div className="text-sm text-slate-500">Monitor CPU, Memory, and Latency profiles for every service version in real-time.</div>
+                                <div className="flex justify-between border-b border-white/5 pb-2">
+                                    <span className="text-slate-600 uppercase">Build Cmd</span>
+                                    <span className="text-slate-300">npm run build</span>
+                                </div>
+                                <div className="flex justify-between border-b border-white/5 pb-2">
+                                    <span className="text-slate-600 uppercase">Start Cmd</span>
+                                    <span className="text-slate-300">npm start</span>
+                                </div>
+                             </div>
+                             <div className="w-full h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 font-bold hover:bg-white/10 transition-colors uppercase tracking-widest text-[10px]">
+                                Manual Deploy
+                             </div>
+                        </div>
+                    </div>
+
+                    {/* STEP 3: DONE */}
+                    <div className="space-y-8">
+                        <div className="flex items-center gap-4">
+                            <div className="w-8 h-8 rounded-md bg-purple-600 flex items-center justify-center font-bold text-sm">3</div>
+                            <h3 className="text-2xl font-bold">KubeLite does the rest</h3>
+                        </div>
+                        <p className="text-slate-500 text-lg leading-relaxed">
+                            Instant networking, scaling, previews, and zero-downtime rollouts.
+                        </p>
+                        <div className="p-6 bg-[#0A0A0A] rounded-xl border border-white/5 space-y-4">
+                            <div className="p-3 rounded-lg bg-white/5 border border-white/5 flex gap-4 items-center">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                <div className="flex-1">
+                                    <div className="text-[10px] font-bold text-white uppercase mb-1 tracking-tighter">Automatic Deploy live</div>
+                                    <div className="text-[9px] text-slate-600 font-mono">1:20:58 PM - Success</div>
+                                </div>
                             </div>
-                            <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-                                <div className="text-white font-bold mb-2 flex items-center gap-2">
-                                    <Lock className="w-4 h-4 text-emerald-400" />
-                                    Security Policy
+                            <div className="p-3 rounded-lg bg-white/5 border border-white/5 flex gap-4 items-center animate-pulse">
+                                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                <div className="flex-1">
+                                    <div className="text-[10px] font-bold text-white uppercase mb-1 tracking-tighter">Preview Env: FE-Fix</div>
+                                    <div className="text-[9px] text-slate-600 font-mono">Building...</div>
                                 </div>
-                                <div className="text-sm text-slate-500">Enforce enterprise-grade isolation and access control across all projects automatically.</div>
+                            </div>
+                            <div className="pt-4 text-center">
+                                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest cursor-pointer hover:underline underline-offset-4">View live site ↗</span>
                             </div>
                         </div>
                     </div>
+
                 </div>
             </section>
 
-            {/* CTA SECTION: MINIMALIST */}
-            <section className="py-48 px-6 text-center border-t border-white/5">
-                <h2 className="text-5xl font-bold mb-8">Stop managing, <br />start building.</h2>
-                <Link to="/register" className="px-12 py-5 rounded-2xl bg-white text-black font-black text-lg hover:scale-105 transition-transform inline-block">
-                    Deploy Now
+            {/* FINAL CTA: THE "CLICK" */}
+            <section className="py-64 px-6 text-center border-t border-white/5">
+                <h2 className="text-6xl font-bold mb-12 tracking-tight">Ready? <br />It only takes a click.</h2>
+                <Link to="/register" className="px-16 py-6 rounded-2xl bg-white text-black font-black text-xl hover:scale-105 transition-transform inline-block">
+                    Start a New Service
                 </Link>
             </section>
 
-            {/* Footer */}
-            <footer className="py-20 px-6 max-w-[1200px] mx-auto opacity-50 text-xs flex justify-between items-center">
-                <span>© 2026 KubeLite Inc. All rights reserved.</span>
-                <div className="flex gap-8">
-                    <Link to="#" className="hover:text-white transition-colors">Twitter</Link>
+            {/* Minimal Footer */}
+            <footer className="py-24 px-6 max-w-[1200px] mx-auto border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-12 font-medium">
+                <div className="flex items-center gap-8 text-sm text-slate-500">
+                    <span>© 2026 KubeLite Inc.</span>
+                    <Link to="#" className="hover:text-white transition-colors">Safety</Link>
+                    <Link to="#" className="hover:text-white transition-colors">Privacy</Link>
+                </div>
+                <div className="flex items-center gap-12 text-sm">
+                    <Link to="#" className="hover:text-white transition-colors">YouTube</Link>
+                    <Link to="#" className="hover:text-white transition-colors">X / Twitter</Link>
                     <Link to="#" className="hover:text-white transition-colors">GitHub</Link>
-                    <Link to="#" className="hover:text-white transition-colors">Terms</Link>
+                    <Link to="#" className="text-slate-400 hover:text-white transition-colors">System Status</Link>
                 </div>
             </footer>
         </div>
