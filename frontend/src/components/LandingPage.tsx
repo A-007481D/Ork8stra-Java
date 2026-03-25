@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { motion, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, useScroll, useSpring } from "framer-motion";
 import { Link } from "react-router-dom";
 import CommandPalette from "./CommandPalette";
 import Navbar from "./Navbar";
