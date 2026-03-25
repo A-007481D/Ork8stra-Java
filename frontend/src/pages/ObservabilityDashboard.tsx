@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { 
     Activity, Server, Cpu, AlertTriangle, CheckCircle2, 
     XCircle, Clock, ArrowUpRight, ArrowDownRight, RotateCcw,
-    Shield, Globe, Lock, Container, Gauge,
-    ExternalLink, Search, RefreshCw, Plus, Filter, Layout, Box, AlertCircle
+    Shield, Lock, Container, Gauge,
+    ExternalLink, RefreshCw, AlertCircle
 } from "lucide-react";
 import type { Organization, Team, Project } from "../types/index";
 import {
-    AreaChart, Area, LineChart, Line, BarChart, Bar,
-    XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell
+    AreaChart, Area, BarChart, Bar,
+    XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from "recharts";
 
 interface ObservabilityDashboardProps {
@@ -275,7 +275,7 @@ function OverviewTab({ token, org, headers }: any) {
 }
 
 // ===== TAB 2: SERVICE LOGS =====
-function ServiceLogsTab({ token, headers }: any) {
+function ServiceLogsTab({ token }: any) {
     const [services, setServices] = useState<any[]>([]);
     const [selectedService, setSelectedService] = useState<any>(null);
     const [logs, setLogs] = useState<string>("");
@@ -413,7 +413,7 @@ function ClusterInsightsTab({ token, org, headers }: any) {
 }
 
 // ===== TAB 4: ALERTS & RULES =====
-function AlertsTab({ token, org, headers }: any) {
+function AlertsTab({ token }: any) {
     const [events, setEvents] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -454,7 +454,7 @@ function AlertsTab({ token, org, headers }: any) {
 }
 
 // ===== TAB 5: DEPLOYMENTS =====
-function DeploymentsTab({ token, headers }: any) {
+function DeploymentsTab({ token }: any) {
     const [deployments, setDeployments] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -606,7 +606,7 @@ function ResourceMetricsTab({ token, org, headers }: any) {
 }
 
 // ===== TAB 7: NODE HEALTH =====
-function NodeHealthTab({ token, headers }: any) {
+function NodeHealthTab({ token }: any) {
     const [nodes, setNodes] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -670,7 +670,7 @@ function NodeHealthTab({ token, headers }: any) {
 }
 
 // ===== TAB 8: AUDIT TRAIL =====
-function AuditTrailTab({ token, headers }: any) {
+function AuditTrailTab({ token }: any) {
     const [events, setEvents] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -716,7 +716,7 @@ function AuditTrailTab({ token, headers }: any) {
 }
 
 // ===== TAB 9: NETWORK POLICIES =====
-function NetworkPoliciesTab({ token, headers }: any) {
+function NetworkPoliciesTab({ token }: any) {
     const [policies, setPolicies] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 

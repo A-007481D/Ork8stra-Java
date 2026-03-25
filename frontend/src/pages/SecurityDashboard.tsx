@@ -6,7 +6,7 @@ import {
 import { Card } from "../components/ui/Card";
 import type { Organization } from "../types/index";
 
-export default function SecurityDashboard({ _org, _activeTab }: { _org: Organization | null, _activeTab: string }) {
+export default function SecurityDashboard({ _org: __org, _activeTab: __activeTab }: { _org: Organization | null, _activeTab: string }) {
     const [token] = useState(localStorage.getItem("token") || "");
     const [isLoading, setIsLoading] = useState(false);
     const [summary, setSummary] = useState<any>(null);

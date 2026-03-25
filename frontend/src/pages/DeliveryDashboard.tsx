@@ -9,7 +9,7 @@ import type { Organization } from "../types/index";
 import { motion, AnimatePresence } from "framer-motion";
 import BuildDetailView from "../components/BuildDetailView";
 
-export default function DeliveryDashboard({ _org, _activeTab }: { _org: Organization | null, _activeTab: string }) {
+export default function DeliveryDashboard({ _org: __org, _activeTab: __activeTab }: { _org: Organization | null, _activeTab: string }) {
     const [token] = useState(localStorage.getItem("token") || "");
     const [isLoading, setIsLoading] = useState(false);
     const [builds, setBuilds] = useState<any[]>([]);

@@ -288,7 +288,7 @@ export default function CreateServiceWizard({
             if (event.data.type === "GITHUB_CONNECTED") {
                 const { access_token, username } = event.data.data;
                 try {
-                    const res = await api.post("/github/connect", { access_token, username });
+                    await api.post("/github/connect", { access_token, username });
                     setGithubConnection({ connected: true, username });
                     fetchRepos();
                 } catch (e) { console.error(e); }
