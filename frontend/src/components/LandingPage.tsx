@@ -2,11 +2,10 @@
 
 
 import { motion } from "framer-motion";
-import { ArrowRight, GithubIcon, Globe, BarChart3, Lock, LayoutGrid } from "lucide-react";
+import { Globe, BarChart3, Lock, LayoutGrid, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import DashboardPreview from "./DashboardPreview";
 import CommandPalette from "./CommandPalette";
-import BentoGrid from "./BentoGrid";
 import Navbar from "./Navbar";
 
 export default function LandingPage() {
@@ -53,110 +52,134 @@ export default function LandingPage() {
             </section>
 
             {/* ---------------------------------------------------------------------------
-          BENTO GRID SECTION
+          SECTION 1: OCI-NATIVE BUILD ENGINE (KANIKO)
           --------------------------------------------------------------------------- */}
-            <BentoGrid />
+            <section className="relative py-32 px-6 max-w-[1200px] mx-auto z-10 border-t border-white/5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
+                    <div className="space-y-6">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold tracking-widest uppercase">
+                            Secure Build Pipeline
+                        </div>
+                        <h2 className="text-4xl font-bold">Daemon-less OCI <br />Build Engine.</h2>
+                        <p className="text-slate-400 text-lg leading-relaxed">
+                            KubeLite uses Kaniko to build container images inside your cluster without 
+                            requiring a privileged Docker daemon. This ensures maximum security 
+                            and compatibility with standard OCI registries.
+                        </p>
+                        <div className="grid grid-cols-2 gap-4 pt-4">
+                            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                                <div className="text-blue-400 font-bold mb-1">Standard OCI</div>
+                                <div className="text-xs text-slate-500 text-pretty">Builds standard images that run anywhere.</div>
+                            </div>
+                            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                                <div className="text-blue-400 font-bold mb-1">No Root Req.</div>
+                                <div className="text-xs text-slate-500 text-pretty">Runs as an unprivileged user in Kubernetes.</div>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Visual: Lightweight Build Flow */}
+                    <div className="relative p-8 glass rounded-3xl border border-white/10 shadow-2xl overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 text-white/5 font-black text-4xl italic">KANIKO</div>
+                        <div className="space-y-4 font-mono text-[11px]">
+                            <div className="flex items-center gap-3 text-emerald-400">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span>[worker-01] Initializing build context...</span>
+                            </div>
+                            <div className="pl-5 space-y-2 text-slate-500">
+                                <div>➜ Fetching repository: feature/auth-fix</div>
+                                <div>➜ Resolving 12 base layers...</div>
+                                <div className="text-blue-400">➜ Layer c3a4de1: CACHED</div>
+                                <div className="text-blue-400">➜ Layer f92b821: CACHED</div>
+                                <div className="flex gap-2">
+                                    <span className="text-white">➜ RUN npm install</span>
+                                    <motion.span 
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{ repeat: Infinity, duration: 1 }}
+                                        className="text-white"
+                                    >_</motion.span>
+                                </div>
+                            </div>
+                            <div className="pt-4 flex justify-between items-center text-[10px] border-t border-white/5">
+                                <span className="text-slate-600 uppercase tracking-widest">Image: backend-api:latest</span>
+                                <span className="text-slate-600">84.2 MB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             {/* ---------------------------------------------------------------------------
-          BENTO CONTENT: HIGH DENSITY FEATURES (Integration of original elements)
+          SECTION 2: LIVE OBSERVABILITY (METRICS & LOGS)
           --------------------------------------------------------------------------- */}
-            <section className="relative pb-40 px-6 max-w-[1200px] mx-auto z-10">
-                <div className="grid grid-cols-12 gap-6">
-                    
-                    {/* Big Card: Git Engine */}
-                    <div className="col-span-12 lg:col-span-8 glass rounded-3xl p-10 overflow-hidden relative group border border-white/10 shadow-2xl">
-                        <div className="relative z-10 max-w-md">
-                            <div className="w-12 h-12 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-6 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
-                                <GithubIcon className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-2xl font-bold mb-4">Git-First Workflows.</h3>
-                            <p className="text-slate-500 leading-relaxed mb-8">
-                                Push code, we handle the rest. Our build engine produces OCI-compliant 
-                                images and rolls them out to your production cluster with zero downtime.
-                            </p>
-                            <div className="flex gap-4">
-                                <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[11px] font-mono text-slate-400">GitHub</div>
-                                <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[11px] font-mono text-slate-400">GitLab</div>
-                                <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[11px] font-mono text-slate-400">Webhooks</div>
-                            </div>
-                        </div>
-                        {/* Visual element */}
-                        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] opacity-20 group-hover:opacity-40 transition-opacity">
-                            <DashboardPreview />
-                        </div>
-                    </div>
+            <section className="relative py-32 px-6 max-w-[1200px] mx-auto z-10">
+                <div className="text-center mb-20 space-y-4">
+                    <h2 className="text-4xl font-bold">Deep Observability, <br />Zero Configuration.</h2>
+                    <p className="text-slate-500 max-w-2xl mx-auto">
+                        Real-time logging and metrics are baked in from day one. Monitor every 
+                        deployment stage and pod health without installing third-party agents.
+                    </p>
+                </div>
+                
+                <div className="relative glass rounded-3xl border border-white/10 shadow-[0_0_100px_-20px_rgba(59,130,246,0.2)] overflow-hidden p-2">
+                    <DashboardPreview />
+                </div>
+            </section>
 
-                    {/* Small Card: Regional Edge */}
-                    <div className="col-span-12 lg:col-span-4 glass rounded-3xl p-10 flex flex-col justify-between group border border-white/10 shadow-2xl">
-                        <div>
-                            <Globe className="w-8 h-8 text-emerald-400 mb-6 group-hover:rotate-12 transition-transform" />
-                            <h3 className="text-2xl font-bold mb-4">Global Edge.</h3>
-                            <p className="text-slate-500 text-sm leading-relaxed">
-                                Automatic anycast routing and global CDN integration. Serve users from 
-                                the closest node with <span className="text-emerald-400 font-bold tracking-tighter">12ms latency</span>.
-                            </p>
+            {/* ---------------------------------------------------------------------------
+          SECTION 3: ENTERPRISE MULTI-TENANCY
+          --------------------------------------------------------------------------- */}
+            <section className="relative py-32 px-6 max-w-[1200px] mx-auto z-10 border-t border-white/5">
+                <div className="flex flex-col lg:flex-row gap-16 items-center">
+                    <div className="lg:w-1/3 space-y-6">
+                        <div className="w-12 h-12 rounded-xl bg-purple-600/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                            <Lock className="w-6 h-6" />
                         </div>
-                        <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Active Regions</span>
-                            <div className="flex -space-x-2">
-                                {[...Array(4)].map((_, i) => (
-                                    <div key={i} className="w-6 h-6 rounded-full border-2 border-[#050505] bg-emerald-500/20 flex items-center justify-center">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <h2 className="text-3xl font-bold">Multi-tenant <br />by Design.</h2>
+                        <p className="text-slate-500 leading-relaxed">
+                            Organize your entire organization into secure logical units. 
+                            KubeLite's IAM layer ensures strict isolation between teams, 
+                            projects, and environments.
+                        </p>
+                        <div className="space-y-4 pt-4">
+                            {[
+                                { title: 'Organizations', desc: 'Top-level isolation with billing and policies.' },
+                                { title: 'Teams', desc: 'Collaborative spaces with RBAC-controlled access.' },
+                                { title: 'Environments', desc: 'Stages for Dev, Staging, and Production.' }
+                            ].map((item) => (
+                                <div key={item.title} className="flex gap-4">
+                                    <div className="w-1 h-auto bg-purple-500/20 rounded" />
+                                    <div>
+                                        <div className="text-sm font-bold text-white">{item.title}</div>
+                                        <div className="text-xs text-slate-500">{item.desc}</div>
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Wide Card: Observability */}
-                    <div className="col-span-12 lg:col-span-12 glass rounded-3xl p-10 grid grid-cols-1 md:grid-cols-2 gap-12 items-center group border border-white/10 shadow-2xl">
-                        <div>
-                            <div className="w-10 h-10 rounded-lg bg-purple-600/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-6">
-                                <BarChart3 className="w-5 h-5" />
-                            </div>
-                            <h3 className="text-3xl font-bold mb-4">Smart Observability.</h3>
-                            <p className="text-slate-500 leading-relaxed mb-6">
-                                Integrated metrics, logging, and tracing. No extra agents required. 
-                                We monitor everything from pod resource usage to ingress error rates 
-                                out of the box.
-                            </p>
-                            <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">
-                                Explore Metrics <ArrowRight className="w-4 h-4" />
-                            </Link>
+                    <div className="lg:w-2/3 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="p-8 glass rounded-2xl border border-white/10 hover:border-white/20 transition-all">
+                            <LayoutGrid className="w-6 h-6 text-blue-400 mb-4" />
+                            <h4 className="text-lg font-bold mb-2 text-white uppercase tracking-tight">Project Scoping</h4>
+                            <p className="text-slate-500 text-sm">Cluster resources are automatically partitioned using namespaces and network policies.</p>
                         </div>
-                        <div className="relative h-48 bg-black/40 rounded-xl border border-white/5 overflow-hidden flex items-end px-6 pb-2 gap-1 group-hover:gap-1.5 transition-all">
-                             {[...Array(40)].map((_, i) => (
-                                <motion.div 
-                                    key={i}
-                                    className="flex-1 bg-purple-500/20 rounded-t-sm"
-                                    initial={{ height: 10 }}
-                                    animate={{ height: `${20 + ((i * 13) % 80)}%` }}
-                                    transition={{ repeat: Infinity, duration: 2, delay: i * 0.05, repeatType: "reverse" }}
-                                />
-                             ))}
+                        <div className="p-8 glass rounded-2xl border border-white/10 hover:border-white/20 transition-all">
+                            <Shield className="w-6 h-6 text-emerald-400 mb-4" />
+                            <h4 className="text-lg font-bold mb-2 text-white uppercase tracking-tight">Policy Enforcement</h4>
+                            <p className="text-slate-500 text-sm">Define quotas and restrict sensitive operations at the organization level.</p>
+                        </div>
+                        <div className="p-8 glass rounded-2xl border border-white/10 hover:border-white/20 transition-all">
+                            <Globe className="w-6 h-6 text-purple-400 mb-4" />
+                            <h4 className="text-lg font-bold mb-2 text-white uppercase tracking-tight">Edge Networking</h4>
+                            <p className="text-slate-500 text-sm">Automated ingress reconciliation with TLS termination for every project.</p>
+                        </div>
+                        <div className="p-8 glass rounded-2xl border border-white/10 hover:border-white/20 transition-all">
+                            <BarChart3 className="w-6 h-6 text-amber-400 mb-4" />
+                            <h4 className="text-lg font-bold mb-2 text-white uppercase tracking-tight">Resource Quotas</h4>
+                            <p className="text-slate-500 text-sm">Ensure fair distribution and prevent runaway costs with granular limit sets.</p>
                         </div>
                     </div>
-
-                    {/* Infrastructure Card */}
-                    <div className="col-span-12 lg:col-span-6 glass rounded-3xl p-10 group border border-white/10 shadow-2xl">
-                        <Lock className="w-8 h-8 text-blue-400 mb-6 group-hover:scale-110 transition-transform" />
-                        <h3 className="text-2xl font-bold mb-4">Hardened Security.</h3>
-                        <p className="text-slate-500 leading-relaxed">
-                            Every environment is isolated with network policies and strict resource quotas. 
-                            Built-in RBAC ensures your team only has access to what they need.
-                        </p>
-                    </div>
-
-                    {/* Developer Experience Card */}
-                    <div className="col-span-12 lg:col-span-6 glass rounded-3xl p-10 group border border-white/10 shadow-2xl">
-                        <LayoutGrid className="w-8 h-8 text-amber-400 mb-6 group-hover:scale-110 transition-transform" />
-                        <h3 className="text-2xl font-bold mb-4">Project Management.</h3>
-                        <p className="text-slate-500 leading-relaxed">
-                            Organize your infrastructure into Teams and Projects. Manage multiple 
-                            environments (Dev, Staging, Production) from a single control plane.
-                        </p>
-                    </div>
-
                 </div>
             </section>
 
