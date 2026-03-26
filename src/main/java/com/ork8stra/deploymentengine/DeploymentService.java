@@ -246,7 +246,13 @@ public class DeploymentService {
         }
 
         public void startApplication(Application app, Project project) {
-                scaleApplication(app, project, 1);
+                // Re-apply resources to ensure latest configuration (like port detection) is used
+                Optional<Deployment> latest = deploymentRepository.findFirstByApplicationIdOrderByDeployedAtDesc(app.getId());
+                if (latest.isPresent()) {
+                        applyRuntimeResources(app, project, latest.get().getVersion(), 1);
+                } else {
+                        scaleApplication(app, project, 1);
+                }
                 updateLatestDeploymentStatus(app.getId(), DeploymentStatus.HEALTHY, 1);
         }
 
@@ -530,7 +536,18 @@ public class DeploymentService {
                         p2.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
                         
                         var config = objectMapper.readTree(configJson);
-                        log.info("No EXPOSE port found in image {}, check Application config", imageTag);
+                        var configNode = config.path("config");
+                        var exposedPorts = configNode.path("ExposedPorts");
+                        
+                        if (exposedPorts.isObject() && !exposedPorts.isEmpty()) {
+                                String firstPortKey = exposedPorts.fieldNames().next(); // e.g. "8080/tcp"
+                                String portPart = firstPortKey.split("/")[0];
+                                int detected = Integer.parseInt(portPart);
+                                log.info("Successfully detected port {} from image metadata for {}", detected, imageTag);
+                                return detected;
+                        }
+                        
+                        log.info("No EXPOSE port found in image metadata for {}, defaulting to Application config", imageTag);
                 } catch (Exception e) {
                         log.warn("Failed to detect port from image {}: {}. Falling back to default/env.", imageTag, e.getMessage());
                 }
