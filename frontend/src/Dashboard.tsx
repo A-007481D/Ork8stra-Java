@@ -37,30 +37,38 @@ import { Button } from "./components/ui/Button";
 import { Card, CardHeader, CardTitle } from "./components/ui/Card";
 
 const mapDeploymentStatusToUi = (status?: string | null): Service['status'] => {
-    if (!status) return 'building';
+    if (!status) return 'idle';
     const s = status.toUpperCase();
     switch (s) {
         case 'HEALTHY':
-        case 'SUCCESS':
+        case 'LIVE':
         case 'ALIVE':
-        case 'COMPLETED':
         case 'READY':
             return 'live';
-        case 'STOPPED': return 'stopped';
-        case 'DEGRADED':
-        case 'RESTARTING':
-        case 'IN_PROGRESS': return 'restarting';
+        case 'STOPPED': 
+        case 'SUSPENDED':
+            return 'stopped';
+        case 'RESTARTING': return 'restarting';
+        case 'IN_PROGRESS':
+        case 'BUILDING':
+        case 'PROVISIONING':
+        case 'PENDING':
+            return 'building';
         case 'FAILED':
-        case 'UNHEALTHY':
         case 'ERROR':
+        case 'UNHEALTHY':
+        case 'CRASH_LOOP_BACK_OFF':
+        case 'CANCELLED':
             return 'failed';
-        default: return 'building';
+        case 'RUNNING':
+            // If the backend says RUNNING for a deployment, it means it's active in the cluster
+            return 'live';
+        default: return 'idle';
     }
 };
 
 // --- COMPONENTS ---
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SidebarItem = ({ icon: Icon, label, active, hasSub, onClick, collapsed }: any) => (
     <button
         onClick={onClick}
@@ -345,7 +353,12 @@ const ServicesGrid = ({ services, loading, onSelect, onAdd }: { services: Servic
                             </div>
                             <h3 className="text-[#E3E3E3] font-medium text-sm">{s.name}</h3>
                         </div>
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                        <div className={`w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.4)] ${
+                            s.status === 'live' ? 'bg-emerald-500 shadow-emerald-500/40' :
+                            s.status === 'failed' ? 'bg-red-500 shadow-red-500/40' :
+                            s.status === 'building' ? 'bg-amber-500 shadow-amber-500/40' :
+                            'bg-slate-600'
+                        }`} />
                     </div>
 
                     <div className="space-y-2 mt-6 p-3 bg-[#111] rounded border border-[#222]">
@@ -374,7 +387,7 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
     const [logs, setLogs] = useState<string[]>([]);
     const [selectedBuild, setSelectedBuild] = useState<any | null>(null);
     const [buildHistory, setBuildHistory] = useState<any[]>([]);
-    const [runtimeStatus, setRuntimeStatus] = useState<Service['status']>(service.status || 'building');
+    const [runtimeStatus, setRuntimeStatus] = useState<Service['status']>(service.status || 'idle');
     const [liveUrl, setLiveUrl] = useState<string | null>(service.live_url || null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [lifecycleLoading, setLifecycleLoading] = useState<'stop' | 'start' | 'restart' | null>(null);
@@ -434,6 +447,9 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                 if (latest) {
                     setRuntimeStatus(mapDeploymentStatusToUi(latest.status));
                     setLiveUrl(latest.liveUrl || null);
+                } else {
+                    setRuntimeStatus('idle');
+                    setLiveUrl(null);
                 }
             }
         } catch (e) { console.error(e); }
@@ -568,8 +584,16 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                 <div className="flex items-center gap-4">
                     <div className="flex flex-col">
                         <span className="text-[10px] uppercase tracking-wider text-[#666] font-semibold mb-0.5">Status</span>
-                        <Badge variant={runtimeStatus === 'live' ? 'live' : runtimeStatus === 'failed' ? 'failed' : 'secondary'} className="text-xs px-2 py-1 uppercase tracking-wider">
-                            {runtimeStatus || "INITIALIZING..."}
+                        <Badge variant={
+                            runtimeStatus === 'live' ? 'live' : 
+                            runtimeStatus === 'failed' ? 'failed' : 
+                            runtimeStatus === 'building' ? 'building' : 
+                            runtimeStatus === 'stopped' ? 'stopped' : 
+                            runtimeStatus === 'idle' ? 'secondary' : 'secondary'
+                        } className="text-xs px-2 py-1 uppercase tracking-wider">
+                            {runtimeStatus === 'idle' ? 'NOT DEPLOYED' : 
+                             runtimeStatus === 'live' ? 'RUNNING' : 
+                             (runtimeStatus || "INITIALIZING...")}
                         </Badge>
                     </div>
                     <div className="h-6 w-[1px] bg-[#222]" />
@@ -611,7 +635,7 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                         size="sm"
                         variant="secondary"
                         onClick={() => handleLifecycleAction('stop')}
-                        disabled={!!lifecycleLoading || runtimeStatus === 'stopped'}
+                        disabled={!!lifecycleLoading || runtimeStatus !== 'live' && runtimeStatus !== 'restarting'}
                         title="Stop running pods (keeps current image)"
                         className="bg-[#222] border-[#333] hover:bg-red-900/40 hover:border-red-700 text-[#CCC] hover:text-red-400 transition-colors"
                     >
@@ -621,7 +645,7 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                         size="sm"
                         variant="secondary"
                         onClick={() => handleLifecycleAction('start')}
-                        disabled={!!lifecycleLoading || runtimeStatus === 'live'}
+                        disabled={!!lifecycleLoading || runtimeStatus !== 'stopped'}
                         title="Start pods from current deployed image"
                         className="bg-[#222] border-[#333] hover:bg-emerald-900/40 hover:border-emerald-700 text-[#CCC] hover:text-emerald-400 transition-colors"
                     >
@@ -631,7 +655,7 @@ const ServiceDetail = ({ service, project, token, onUpdate, onDelete }: { servic
                         size="sm"
                         variant="secondary"
                         onClick={() => handleLifecycleAction('restart')}
-                        disabled={!!lifecycleLoading || runtimeStatus === 'stopped'}
+                        disabled={!!lifecycleLoading || runtimeStatus !== 'live' && runtimeStatus !== 'restarting'}
                         title="Restart pods without creating a new build"
                         className="bg-[#222] border-[#333] hover:bg-amber-900/40 hover:border-amber-700 text-[#CCC] hover:text-amber-400 transition-colors"
                     >
@@ -908,7 +932,6 @@ export default function Dashboard() {
         return false;
     }, [logout]);
 
-    // Fetch Orgs
     const fetchOrgs = useCallback(async () => {
         if (!token) return;
         try {
@@ -1004,21 +1027,21 @@ export default function Dashboard() {
     }, [token, viewState, handleAuthError]);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchOrgs();
     }, [fetchOrgs]);
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (currentOrg) fetchTeams();
     }, [fetchTeams, currentOrg]);
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (currentTeam) fetchProjects();
     }, [fetchProjects, currentTeam]);
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        if (viewState.type === 'PROJECT') fetchServices();
-    }, [fetchServices, viewState.type, viewState]);
+        if (viewState.type === 'PROJECT' || viewState.type === 'SERVICE') {
+            fetchServices();
+            const interval = setInterval(fetchServices, 10000); // Auto-refresh every 10s
+            return () => clearInterval(interval);
+        }
+    }, [fetchServices, viewState.type]);
 
     // Handlers
     const handleProjectSelect = (p: Project) => {

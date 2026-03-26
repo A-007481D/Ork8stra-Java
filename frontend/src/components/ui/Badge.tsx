@@ -17,6 +17,7 @@ const badgeVariants = cva(
                 live: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.2)]",
                 failed: "border-red-500/20 bg-red-500/10 text-red-400",
                 building: "border-amber-500/20 bg-amber-500/10 text-amber-400 animate-pulse",
+                stopped: "border-slate-500/20 bg-slate-500/10 text-slate-400",
                 queued: "border-slate-500/20 bg-slate-500/10 text-slate-400",
                 neutral: "bg-white/5 text-slate-400 border-white/5",
             },

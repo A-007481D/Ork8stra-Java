@@ -46,7 +46,6 @@ class KanikoJobFactoryTest {
 
     @Test
     void createKanikoJob_usesGeneratedDockerfileInAutoMode() {
-        // ... (rest of the test)
         UUID projectId = UUID.randomUUID();
         Application app = new Application("node-service", projectId, "https://github.com/acme/node-service", "main");
         app.setDockerfilePath(null);

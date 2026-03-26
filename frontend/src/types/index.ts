@@ -176,7 +176,7 @@ export interface Service {
     repo_url: string;
     branch: string;
     created_at: string;
-    status?: 'live' | 'failed' | 'building' | 'stopped' | 'restarting';
+    status?: 'live' | 'failed' | 'building' | 'stopped' | 'restarting' | 'idle';
     deployment_status?: string;
     live_url?: string;
     port?: number;

@@ -50,6 +50,20 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
         }
     };
 
+    const markAllAsRead = async () => {
+        try {
+            const res = await fetch('/api/v1/notifications/read-all', {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+            }
+        } catch (e) {
+            console.error('Failed to mark all as read', e);
+        }
+    };
+
     const getIcon = (type: NotificationType) => {
         switch (type) {
             case 'DEPLOY_SUCCESS':
@@ -91,12 +105,22 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
                                 </div>
                                 <h2 className="text-xl font-semibold text-[#E3E3E3]">Notifications</h2>
                             </div>
-                            <button 
-                                onClick={onClose}
-                                className="p-2 hover:bg-[#1A1A1A] rounded-full text-[#666] hover:text-[#E3E3E3] transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {notifications.some(n => !n.read) && (
+                                    <button 
+                                        onClick={markAllAsRead}
+                                        className="text-xs text-purple-400 hover:text-purple-300 transition-colors mr-2 px-2 py-1 hover:bg-purple-500/10 rounded-md"
+                                    >
+                                        Mark all as read
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={onClose}
+                                    className="p-2 hover:bg-[#1A1A1A] rounded-full text-[#666] hover:text-[#E3E3E3] transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">

@@ -9,6 +9,8 @@ import com.ork8stra.buildengine.BuildService;
 import com.ork8stra.buildengine.BuildStatus;
 import com.ork8stra.projectmanagement.Project;
 import com.ork8stra.projectmanagement.ProjectService;
+import com.ork8stra.deploymentengine.Deployment;
+import com.ork8stra.deploymentengine.DeploymentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -49,6 +51,9 @@ class BuildControllerTest {
     @MockitoBean
     private BuildLogService buildLogService;
 
+    @MockitoBean
+    private DeploymentService deploymentService;
+
     @Test
     @WithMockUser
     void shouldTriggerBuildSuccessfully() throws Exception {
@@ -67,14 +72,18 @@ class BuildControllerTest {
 
         when(applicationService.getApplication(appId)).thenReturn(mockApp);
         when(projectService.getProjectById(projectId)).thenReturn(mockProject);
-        when(buildService.triggerBuild(eq(mockApp), eq(mockProject), any(String.class))).thenReturn(mockBuild);
+        
+        Deployment mockDeployment = new Deployment(appId, "HEAD");
+        when(deploymentService.triggerBuildDeployment(eq(mockApp), eq(mockProject), any(String.class), any(UUID.class))).thenReturn(mockDeployment);
+        
+        when(buildService.triggerBuild(eq(mockApp), eq(mockProject), any(String.class), any(UUID.class))).thenReturn(mockBuild);
 
         mockMvc.perform(post("/api/v1/apps/" + appId + "/build").with(csrf()))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("RUNNING"))
                 .andExpect(jsonPath("$.jobName").value("build-frontend-app-abc123"));
 
-        verify(buildService).triggerBuild(eq(mockApp), eq(mockProject), any(String.class));
+        verify(buildService).triggerBuild(eq(mockApp), eq(mockProject), any(String.class), any(UUID.class));
     }
 
     @Test

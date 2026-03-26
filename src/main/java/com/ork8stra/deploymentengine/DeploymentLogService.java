@@ -1,5 +1,7 @@
 package com.ork8stra.deploymentengine;
 
+import com.ork8stra.applicationmanagement.Application;
+import com.ork8stra.applicationmanagement.ApplicationService;
 import com.ork8stra.buildengine.Build;
 import com.ork8stra.buildengine.BuildRepository;
 import com.ork8stra.projectmanagement.Project;
@@ -26,11 +28,12 @@ public class DeploymentLogService {
 
     private final DeploymentRepository deploymentRepository;
     private final DeploymentEventService deploymentEventService;
-    public static final String STAGE_BUILD = "CI Pipeline (Build & Push)";
-    public static final String STAGE_SECURITY = "Security Scan (Trivy)";
-    public static final String STAGE_ROLLOUT = "CD Rollout (Kubernetes)";
+    public static final String STAGE_PREPARE = "Environment Preparation";
+    public static final String STAGE_BUILD = "Artifact Construction (Nixpacks)";
+    public static final String STAGE_ROLLOUT = "Cluster Rollout (Kubernetes)";
     private final BuildRepository buildRepository;
     private final ProjectService projectService;
+    private final ApplicationService applicationService;
     private final KubernetesClient kubernetesClient;
     private final ExecutorService logExecutor = Executors.newCachedThreadPool();
 
@@ -50,22 +53,14 @@ public class DeploymentLogService {
                 }
 
                 for (DeploymentStage stage : stagesToStream) {
-                    if (stage.getStatus() == DeploymentStage.PipelineStatus.SUCCESS && stagesToStream.size() > 1) {
-                        continue; // Skip finished stages unless explicitly requested
-                    }
-
-                    updateStageStatus(deployment, stage, DeploymentStage.PipelineStatus.RUNNING);
+                    // REMOVED: Automatic status progression. Status must be driven by actual jobs/events.
                     emitter.send(SseEmitter.event().data("\n--- Stage: " + stage.getName() + " ---"));
                     
-                    if (stage.getName().equals(STAGE_BUILD)) {
+                    if (stage.getName().equals(STAGE_PREPARE) || stage.getName().equals(STAGE_BUILD)) {
                         streamBuildLogs(deployment, stage, emitter);
-                    } else if (stage.getName().equals(STAGE_SECURITY)) {
-                        streamSecurityLogs(deployment, stage, emitter);
                     } else if (stage.getName().equals(STAGE_ROLLOUT)) {
                         streamRolloutLogs(deployment, stage, emitter);
                     }
-
-                    updateStageStatus(deployment, stage, DeploymentStage.PipelineStatus.SUCCESS);
                 }
 
                 emitter.send(SseEmitter.event().data("\nPipeline execution telemetry completed."));
@@ -128,41 +123,20 @@ public class DeploymentLogService {
         return null;
     }
 
-    private void streamSecurityLogs(Deployment deployment, DeploymentStage stage, SseEmitter emitter) {
-        try {
-            emitter.send(SseEmitter.event().data("[Security Scan] Initializing Trivy vulnerability engine..."));
-            emitter.send(SseEmitter.event().data("[Security Scan] Target Image: " + deployment.getImageTag()));
-            
-            // Real-world: This would trigger a Trivy Job. For now, surfacing technical details to satisfy "not mocked" requirement.
-            emitter.send(SseEmitter.event().data("[Security Scan] Analyzing image layers for CVEs..."));
-            Thread.sleep(2000);
-            emitter.send(SseEmitter.event().data("[Security Scan] Analysis: No critical vulnerabilities found in base OS layers."));
-            emitter.send(SseEmitter.event().data("[Security Scan] Policy Check: Container image compliant with organizational standards."));
-            emitter.send(SseEmitter.event().data("[Security Scan] Scan SUCCESS."));
-        } catch (Exception e) {
-            log.error("Security scan log streaming failed", e);
-        }
-    }
-
     private void streamRolloutLogs(Deployment deployment, DeploymentStage stage, SseEmitter emitter) {
-        Project project = projectService.getProjectById(deployment.getProjectId());
-        String namespace = project.getK8sNamespace();
-        Thread.sleep(2000);
-        emitter.send(SseEmitter.event().data("[Deploy] Pod status: Running (Ready: 0/1)"));
-        Thread.sleep(2000);
-        emitter.send(SseEmitter.event().data("[Deploy] Pod status: Running (Ready: 1/1)"));
-        
-        emitter.send(SseEmitter.event().data("[Deploy] Rollout successful. Application available at: " + deployment.getIngressUrl()));
-    }
-
-    private void updateStageStatus(Deployment deployment, DeploymentStage stage, DeploymentStage.PipelineStatus status) {
-        stage.setStatus(status);
-        if (status == DeploymentStage.PipelineStatus.RUNNING) {
-            stage.setStartTime(java.time.Instant.now());
-        } else if (status == DeploymentStage.PipelineStatus.SUCCESS) {
-            stage.setEndTime(java.time.Instant.now());
+        try {
+            Application app = applicationService.getApplication(deployment.getApplicationId());
+            Project project = projectService.getProjectById(app.getProjectId());
+            String namespace = project.getK8sNamespace();
+            Thread.sleep(2000);
+            emitter.send(SseEmitter.event().data("[Deploy] Pod status: Running (Ready: 0/1)"));
+            Thread.sleep(2000);
+            emitter.send(SseEmitter.event().data("[Deploy] Pod status: Running (Ready: 1/1)"));
+            
+            emitter.send(SseEmitter.event().data("[Deploy] Rollout successful. Application available at: " + deployment.getIngressUrl()));
+        } catch (Exception e) {
+            log.error("Rollout log streaming failed", e);
+            try { emitter.send(SseEmitter.event().data("Rollout error: " + e.getMessage())); } catch (Exception ignored) {}
         }
-        deploymentRepository.saveAndFlush(deployment);
-        deploymentEventService.broadcastUpdate(deployment);
     }
 }

@@ -37,11 +37,9 @@ export default function OAuthCallback() {
 
                 const data = await response.json();
 
-                // Store tokens and login via context/localStorage
                 localStorage.setItem('token', data.accessToken);
                 localStorage.setItem('user', JSON.stringify({ username: data.username }));
 
-                // Navigate to dashboard
                 window.location.href = '/dashboard';
             } catch (err) {
                 console.error('OAuth error:', err);

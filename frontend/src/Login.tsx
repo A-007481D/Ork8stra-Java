@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Github, CheckCircle2, Loader2, Command } from "lucide-react";
+import { Github, Loader2, Command, CheckCircle2 } from "lucide-react";
+import { motion } from "framer-motion";
+import Ork8straLogo from "./components/Ork8straLogo";
 
 export default function Login() {
     const [loading, setLoading] = useState(false);
@@ -52,21 +54,22 @@ export default function Login() {
     return (
         <div className="min-h-screen w-full bg-[#050505] text-white font-sans flex overflow-hidden">
 
-            {/* ---------------------------------------------------------------------------
-          LEFT SIDE: VISUAL & BRANDING
-         --------------------------------------------------------------------------- */}
-            <div className="hidden lg:flex w-1/2 bg-[#0B0C10] border-r border-white/5 flex-col justify-between p-12 relative overflow-hidden">
+            {/* LEFT SIDE: VISUAL & BRANDING */}
+            <motion.div 
+                initial={{ x: -100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className="hidden lg:flex w-1/2 bg-[#0B0C10] border-r border-white/5 flex-col justify-between p-20 relative overflow-hidden"
+            >
 
                 {/* Background Decor */}
                 <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/5 blur-[100px] rounded-full pointer-events-none" />
 
                 {/* Brand Top */}
-                <Link to="/" className="flex items-center gap-2 z-10 w-fit hover:opacity-80 transition-opacity">
-                    <div className="w-8 h-8 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blue-500/20">
-                        O
-                    </div>
-                    <span className="text-xl font-bold tracking-tight text-white">
+                <Link to="/" className="flex items-center gap-4 z-10 w-fit group hover:opacity-80 transition-opacity">
+                    <Ork8straLogo className="w-10 h-10" />
+                    <span className="text-2xl font-black tracking-tighter text-white">
                         ork8stra
                     </span>
                 </Link>
@@ -76,12 +79,15 @@ export default function Login() {
                     <div className="mb-6 opacity-50">
                         <Command className="w-10 h-10" />
                     </div>
-                    <blockquote className="text-2xl font-medium leading-relaxed tracking-tight mb-6 text-slate-200">
+                    <blockquote className="text-2xl font-black leading-[1.1] tracking-[-0.04em] mb-10 text-white selection:bg-blue-600">
                         "Ork8stra completely removed the friction from our deployment pipeline. It feels like cheating."
                     </blockquote>
-                    <div>
-                        <div className="font-bold text-white">Sarah Jenkins</div>
-                        <div className="text-slate-500">Principal Engineer, Acme Corp</div>
+                    <div className="flex items-center gap-4">
+                        {/* <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black">SJ</div> */}
+                        <div>
+                            <div className="font-black text-white uppercase tracking-widest text-xs">Sarah Jenkins</div>
+                            <div className="text-slate-500 text-[10px] font-bold  tracking-widest">Principal Engineer, Acme Corp</div>
+                        </div>
                     </div>
                 </div>
 
@@ -90,61 +96,65 @@ export default function Login() {
                     <CheckCircle2 className="w-4 h-4" />
                     <span>All Systems Operational</span>
                 </div>
-            </div>
+            </motion.div>
 
 
-            {/* ---------------------------------------------------------------------------
-          RIGHT SIDE: LOGIN FORM
-         --------------------------------------------------------------------------- */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 relative">
+            {/* RIGHT SIDE: LOGIN FORM */}
+            <motion.div 
+                initial={{ x: 100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className="w-full lg:w-1/2 flex items-center justify-center p-20 relative"
+            >
+                <div className="w-full max-w-sm space-y-12">
 
-                <div className="w-full max-w-sm space-y-8">
-
-                    <div className="text-center">
-                        <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome back</h1>
-                        <p className="text-slate-400">Enter your credentials to access the flight deck.</p>
+                    <div className="text-center space-y-2">
+                        <h1 className="text-5xl font-black tracking-[-0.05em] text-white">Welcome back</h1>
+                        <p className="text-slate-500 text-sm font-medium lowercase tracking-tight">Enter your credentials to access the engine.</p>
                     </div>
 
                     <div className="space-y-4">
                         <button
                             type="button"
                             onClick={handleGithubLogin}
-                            className="w-full bg-[#1A1C20] hover:bg-[#22242A] border border-white/10 text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-3 transition-all active:scale-95"
+                            className="w-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-white font-black text-xs uppercase tracking-widest py-4 rounded-xl flex items-center justify-center gap-3 transition-all active:scale-95 backdrop-blur-xl"
                         >
-                            <Github className="w-5 h-5" />
+                            <Github className="w-4 h-4" />
                             Continue with GitHub
                         </button>
 
                         <div className="relative">
-                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
-                            <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#050505] px-2 text-slate-500">Or continue with email</span></div>
+                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5" /></div>
+                            <div className="relative flex justify-center text-[10px] font-black uppercase tracking-[0.2em]"><span className="bg-[#050505] px-4 text-slate-700">Or continue with email</span></div>
                         </div>
 
                         <form onSubmit={handleLogin} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1.5">Username</label>
-                                <input
-                                    type="text"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    className="w-full bg-[#0D0E12] border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                                    placeholder="johndoe"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <div className="flex justify-between items-center mb-1.5">
-                                    <label className="block text-sm font-medium text-slate-400">Password</label>
-                                    <a href="#" className="text-xs text-blue-400 hover:text-blue-300">Forgot password?</a>
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Username</label>
+                                    <input
+                                        type="text"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm placeholder:text-slate-800 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.04] transition-all backdrop-blur-sm"
+                                        placeholder="johndoe"
+                                        required
+                                    />
                                 </div>
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-[#0D0E12] border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                                    placeholder="••••••••"
-                                    required
-                                />
+                                <div>
+                                    <div className="flex justify-between items-center mb-2 px-1">
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Password</label>
+                                        <a href="#" className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest transition-colors">Forgot?</a>
+                                    </div>
+                                    <input
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm placeholder:text-slate-800 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.04] transition-all backdrop-blur-sm"
+                                        placeholder="••••••••"
+                                        required
+                                    />
+                                </div>
                             </div>
 
                             {error && (
@@ -156,19 +166,19 @@ export default function Login() {
                             <button
                                 disabled={loading}
                                 type="submit"
-                                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-all shadow-lg shadow-blue-900/20 active:scale-95 flex items-center justify-center gap-2"
+                                className="w-full bg-white text-black font-black text-xs uppercase tracking-[0.2em] py-4 rounded-xl hover:bg-blue-50 transition-all shadow-[0_0_40px_rgba(255,255,255,0.1)] active:scale-95 flex items-center justify-center gap-2"
                             >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign In"}
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Initiate Session"}
                             </button>
                         </form>
                     </div>
 
-                    <p className="text-center text-sm text-slate-500">
-                        Don't have an account? <Link to="/register" className="text-blue-400 hover:text-blue-300 transition-colors">Sign up</Link>
+                    <p className="text-center text-[10px] font-black uppercase tracking-widest text-slate-800">
+                        No engine access? <Link to="/register" className="text-blue-500 hover:text-white transition-colors ml-2">Register Identity</Link>
                     </p>
 
                 </div>
-            </div>
+            </motion.div>
 
         </div>
     );

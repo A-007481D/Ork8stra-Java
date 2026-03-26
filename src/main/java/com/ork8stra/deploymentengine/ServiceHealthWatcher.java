@@ -88,14 +88,18 @@ public class ServiceHealthWatcher {
     }
 
     private DeploymentStatus determineStatus(Deployment k8sDeployment) {
+        if (k8sDeployment.getStatus() == null || k8sDeployment.getSpec() == null) {
+            return DeploymentStatus.IN_PROGRESS;
+        }
+
         var status = k8sDeployment.getStatus();
         var spec = k8sDeployment.getSpec();
 
-        if (spec.getReplicas() == null || spec.getReplicas() == 0) {
+        int desired = spec.getReplicas() != null ? spec.getReplicas() : 0;
+        if (desired == 0) {
             return DeploymentStatus.STOPPED;
         }
 
-        int desired = spec.getReplicas();
         int ready = status.getReadyReplicas() != null ? status.getReadyReplicas() : 0;
         int unavailable = status.getUnavailableReplicas() != null ? status.getUnavailableReplicas() : 0;
 
@@ -103,12 +107,16 @@ public class ServiceHealthWatcher {
             return DeploymentStatus.HEALTHY;
         }
 
-        // Improved logic: if pods are still provisioning but not failed, it's IN_PROGRESS
-        if (unavailable > 0 || ready < desired) {
-            // Check if any pods are actually in Error or CrashLoopBackOff before flagging UNHEALTHY
-            return DeploymentStatus.IN_PROGRESS;
-        }
-
+        // Check for actual failure conditions in pods if possible
+        // For now, if we have replicas but none are ready and we have unavailable, stay in IN_PROGRESS
+        // unless we have specific failure signals from k8s status conditions
+        boolean isFailed = status.getConditions() != null && status.getConditions().stream()
+                .anyMatch(c -> "Available".equals(c.getType()) && "False".equals(c.getStatus()) && "MinimumReplicasUnavailable".equals(c.getReason()));
+        
+        // Actually, during a fresh deploy, MinimumReplicasUnavailable is normal.
+        // So we only return UNHEALTHY if it's been in this state for a long time (not handled here) 
+        // or if we see specific error reasons.
+        
         return DeploymentStatus.IN_PROGRESS;
     }
 

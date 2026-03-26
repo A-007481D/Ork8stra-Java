@@ -40,10 +40,10 @@ export default function CommandPalette() {
     };
 
     return (
-        <div className="w-full max-w-2xl mx-auto">
-            <div className={`relative glass rounded-2xl transition-all duration-300 ${isFocused ? 'ring-2 ring-blue-500/50 shadow-[0_0_50px_-12px_rgba(59,130,246,0.5)]' : 'shadow-2xl'}`}>
+        <div className="w-full max-w-3xl mx-auto">
+            <div className={`relative glass rounded-3xl transition-all duration-500 ${isFocused ? 'ring-1 ring-white/10 shadow-[0_0_80px_-15px_rgba(59,130,246,0.3)]' : 'shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)]'}`}>
                 {/* Input Area */}
-                <div className="flex items-center gap-4 px-6 h-16 border-b border-white/5">
+                <div className="flex items-center gap-6 px-8 h-20 border-b border-white/5">
                     <Search className={`w-5 h-5 transition-colors ${isFocused ? 'text-blue-400' : 'text-slate-500'}`} />
                     <input 
                         ref={inputRef}

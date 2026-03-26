@@ -9,7 +9,7 @@ import type { Organization } from "../types/index";
 import { motion, AnimatePresence } from "framer-motion";
 import BuildDetailView from "../components/BuildDetailView";
 
-export default function DeliveryDashboard({ _org, _activeTab }: { _org: Organization | null, _activeTab: string }) {
+export default function DeliveryDashboard({ _org: __org, _activeTab: __activeTab }: { _org: Organization | null, _activeTab: string }) {
     const [token] = useState(localStorage.getItem("token") || "");
     const [isLoading, setIsLoading] = useState(false);
     const [builds, setBuilds] = useState<any[]>([]);
@@ -58,7 +58,7 @@ export default function DeliveryDashboard({ _org, _activeTab }: { _org: Organiza
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-                        <Zap className="w-8 h-8 text-yellow-400" />
+                        {/* <Zap className="w-8 h-8 text-yellow-400" /> */}
                         Delivery Center
                     </h1>
                     <p className="text-[#666] mt-1">Platform-wide CI/CD pipelines and artifact orchestration.</p>
@@ -110,7 +110,9 @@ export default function DeliveryDashboard({ _org, _activeTab }: { _org: Organiza
                                     <div className="p-4 space-y-3">
                                         <div className="flex items-center justify-between">
                                             <span className="text-xs font-bold text-white group-hover:text-yellow-400 transition-colors truncate max-w-[150px]">{pipeline.applicationName}</span>
-                                            <span className="text-[10px] text-yellow-500 font-bold uppercase animate-pulse">{pipeline.status}</span>
+                                            <span className="text-[10px] text-yellow-500 font-bold uppercase animate-pulse">
+                                                {(pipeline.status === 'RUNNING' || pipeline.status === 'PENDING' || pipeline.status === 'IN_PROGRESS') ? 'BUILDING' : pipeline.status}
+                                            </span>
                                         </div>
                                         <div className="h-1 bg-black/40 rounded-full overflow-hidden">
                                             <motion.div 
@@ -166,15 +168,16 @@ export default function DeliveryDashboard({ _org, _activeTab }: { _org: Organiza
                                             <td className="px-6 py-4 text-xs text-[#888]">{build.projectName}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
-                                                    {build.status === 'SUCCESS' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
-                                                    {build.status === 'FAILED' && <XCircle className="w-3.5 h-3.5 text-red-500" />}
-                                                    {build.status === 'RUNNING' && <Activity className="w-3.5 h-3.5 text-yellow-500 animate-spin" />}
+                                                    {(build.status === 'SUCCESS' || build.status === 'HEALTHY') && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                                                    {(build.status === 'FAILED' || build.status === 'UNHEALTHY' || build.status === 'ERROR') && <XCircle className="w-3.5 h-3.5 text-red-500" />}
+                                                    {(build.status === 'RUNNING' || build.status === 'PENDING' || build.status === 'IN_PROGRESS') && <Activity className="w-3.5 h-3.5 text-yellow-500 animate-spin" />}
                                                     <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                                                        build.status === 'SUCCESS' ? 'text-emerald-500' :
-                                                        build.status === 'FAILED' ? 'text-red-500' :
+                                                        (build.status === 'SUCCESS' || build.status === 'HEALTHY') ? 'text-emerald-500' :
+                                                        (build.status === 'FAILED' || build.status === 'UNHEALTHY' || build.status === 'ERROR') ? 'text-red-500' :
                                                         'text-yellow-500'
                                                     }`}>
-                                                        {build.status}
+                                                        {(build.status === 'RUNNING' || build.status === 'PENDING' || build.status === 'IN_PROGRESS') ? 'BUILDING' : 
+                                                         (build.status === 'SUCCESS' || build.status === 'HEALTHY' || build.status === 'SUCCESSFUL') ? 'SUCCESS' : build.status}
                                                     </span>
                                                 </div>
                                             </td>

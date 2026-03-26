@@ -5,6 +5,8 @@ import com.ork8stra.applicationmanagement.ApplicationService;
 import com.ork8stra.applicationmanagement.ServiceConnection;
 import com.ork8stra.applicationmanagement.ServiceConnectionService;
 import com.ork8stra.buildengine.BuildCompletedEvent;
+import com.ork8stra.notification.NotificationService;
+import com.ork8stra.notification.NotificationType;
 import com.ork8stra.projectmanagement.Project;
 import com.ork8stra.projectmanagement.ProjectService;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -43,6 +45,7 @@ public class DeploymentService {
         private final ProjectService projectService;
         private final ServiceConnectionService connectionService;
         private final DeploymentEventService deploymentEventService;
+        private final NotificationService notificationService;
 
         @Value("${kubelite.base-domain}")
         private String baseDomain;
@@ -59,28 +62,43 @@ public class DeploymentService {
         @ApplicationModuleListener
         @Transactional(propagation = Propagation.REQUIRES_NEW)
         public void onBuildCompleted(BuildCompletedEvent event) {
-                if (!event.success()) {
-                        return;
-                }
-
                 Application app = applicationService.getApplication(event.applicationId());
                 Project project = projectService.getProjectById(app.getProjectId());
                 
                 // Find existing deployment for this build if any
                 Deployment deployment = deploymentRepository.findFirstByApplicationIdOrderByDeployedAtDesc(app.getId())
-                        .filter(d -> d.getStatus() == DeploymentStatus.IN_PROGRESS && d.getVersion().equals(event.imageTag()))
+                        .filter(d -> d.getStatus() == DeploymentStatus.IN_PROGRESS && (event.imageTag() == null || d.getVersion().equals(event.imageTag())))
                         .orElse(null);
+
+                if (!event.success()) {
+                        log.error("Build failed for app {}. Marking deployment as FAILED.", event.applicationId());
+                        if (deployment != null) {
+                                deployment.setStatus(DeploymentStatus.FAILED);
+                                // Mark build stage as failed
+                                updateStageStatus(deployment, DeploymentLogService.STAGE_BUILD, DeploymentStage.PipelineStatus.FAILED);
+                                deploymentRepository.save(deployment);
+                                deploymentEventService.broadcastUpdate(deployment);
+                        }
+                        
+                        notificationService.sendNotification(event.userId(), NotificationType.DEPLOY_FAILED,
+                                "Build Failed", "Application '" + app.getName() + "' failed to build.");
+                        return;
+                }
 
                 if (deployment != null) {
                     log.info("Continuing deployment pipeline for existing deployment {}", deployment.getId());
+                    // Mark Prep and Build stages as success
+                    updateStageStatus(deployment, DeploymentLogService.STAGE_PREPARE, DeploymentStage.PipelineStatus.SUCCESS);
+                    updateStageStatus(deployment, DeploymentLogService.STAGE_BUILD, DeploymentStage.PipelineStatus.SUCCESS);
                 }
 
-                deploy(app, project, event.imageTag());
+                deploy(app, project, event.imageTag(), event.userId());
         }
 
         @Transactional
-        public Deployment triggerBuildDeployment(Application app, Project project, String imageTag) {
+        public Deployment triggerBuildDeployment(Application app, Project project, String imageTag, UUID userId) {
                 Deployment deployment = new Deployment(app.getId(), imageTag);
+                deployment.setUserId(userId);
                 initializeStages(deployment);
                 deployment.setStatus(DeploymentStatus.IN_PROGRESS);
                 deploymentRepository.save(deployment);
@@ -92,7 +110,7 @@ public class DeploymentService {
         }
 
         @Transactional
-        public Deployment deploy(Application app, Project project, String imageTag) {
+        public Deployment deploy(Application app, Project project, String imageTag, UUID userId) {
                 // Try to find an existing IN_PROGRESS deployment for this build
                 Deployment deployment = deploymentRepository.findFirstByApplicationIdOrderByDeployedAtDesc(app.getId())
                         .filter(d -> d.getStatus() == DeploymentStatus.IN_PROGRESS && d.getVersion().equals(imageTag))
@@ -100,63 +118,61 @@ public class DeploymentService {
 
                 if (deployment == null) {
                     deployment = new Deployment(app.getId(), imageTag);
+                    deployment.setUserId(userId);
                     initializeStages(deployment);
                     deployment.setStatus(DeploymentStatus.IN_PROGRESS);
                 }
                 
                 deploymentRepository.save(deployment);
 
-                // Stage 1: Build is already success at this point (triggered this call)
-                updateStageStatus(deployment, DeploymentLogService.STAGE_BUILD, DeploymentStage.PipelineStatus.SUCCESS);
-
-                // Stage 2: Security & Quality
-                updateStageStatus(deployment, DeploymentLogService.STAGE_SECURITY, DeploymentStage.PipelineStatus.RUNNING);
-                // Synchronous scan would go here. Setting to SUCCESS for now.
-                updateStageStatus(deployment, DeploymentLogService.STAGE_SECURITY, DeploymentStage.PipelineStatus.SUCCESS);
-
-                // Stage 3: Kubernetes Rollout
+                // Start Rollout Stage
                 updateStageStatus(deployment, DeploymentLogService.STAGE_ROLLOUT, DeploymentStage.PipelineStatus.RUNNING);
 
                 String ingressUrl = applyRuntimeResources(app, project, imageTag, 1);
                 deployment.setIngressUrl(ingressUrl);
                 deployment.setReplicas(1);
+                // DO NOT set HEALTHY here. Let ServiceHealthWatcher reconcile it once pods are actually ready.
                 
                 deploymentRepository.save(deployment);
+
+                notificationService.sendNotification(deployment.getUserId(), NotificationType.DEPLOY_SUCCESS,
+                        "Deployment Successful", "Application '" + app.getName() + "' is now live!");
+
+                deploymentEventService.broadcastUpdate(deployment);
                 return deployment;
         }
 
         public void initializeStages(Deployment deployment) {
                 if (deployment.getStages() == null) {
                     deployment.setStages(new ArrayList<>());
-                    deploymentRepository.saveAndFlush(deployment);
+                } else if (!deployment.getStages().isEmpty()) {
+                    return;
                 }
-                
-                if (!deployment.getStages().isEmpty()) return;
                 
                 log.info("Initializing baseline stages for deployment {}", deployment.getId());
 
-                // Stage 1: Build (CI)
-                DeploymentStage buildStage = DeploymentStage.builder()
-                                .name(DeploymentLogService.STAGE_BUILD)
+                // Stage 1: Preparation (Git Clone)
+                DeploymentStage prepStage = DeploymentStage.builder()
+                                .name(DeploymentLogService.STAGE_PREPARE)
                                 .status(DeploymentStage.PipelineStatus.PENDING)
                                 .orderIndex(0)
                                 .deployment(deployment)
-                                .estimatedDuration(300L)
+                                .estimatedDuration(30L)
                                 .build();
-                buildStage.getSteps().add(DeploymentStep.builder().name("Kaniko Build").status(DeploymentStage.PipelineStatus.PENDING).build());
-                buildStage.getSteps().add(DeploymentStep.builder().name("Image Push").status(DeploymentStage.PipelineStatus.PENDING).build());
+                prepStage.getSteps().add(DeploymentStep.builder().name("Fetching Source").status(DeploymentStage.PipelineStatus.PENDING).build());
 
-                // Stage 2: Security Scan
-                DeploymentStage testStage = DeploymentStage.builder()
-                                .name(DeploymentLogService.STAGE_SECURITY)
+                // Stage 2: Artifact Construction (Nixpacks + Kaniko)
+                DeploymentStage buildStage = DeploymentStage.builder()
+                                .name(DeploymentLogService.STAGE_BUILD)
                                 .status(DeploymentStage.PipelineStatus.PENDING)
                                 .orderIndex(1)
                                 .deployment(deployment)
-                                .estimatedDuration(60L)
+                                .estimatedDuration(300L)
                                 .build();
-                testStage.getSteps().add(DeploymentStep.builder().name("Trivy Vulnerability Scan").status(DeploymentStage.PipelineStatus.PENDING).build());
+                buildStage.getSteps().add(DeploymentStep.builder().name("Nixpacks Analysis").status(DeploymentStage.PipelineStatus.PENDING).build());
+                buildStage.getSteps().add(DeploymentStep.builder().name("Kaniko Build & Push").status(DeploymentStage.PipelineStatus.PENDING).build());
 
-                // Stage 3: Deployment (CD)
+                // Stage 3: Cluster Rollout
                 DeploymentStage deployStage = DeploymentStage.builder()
                                 .name(DeploymentLogService.STAGE_ROLLOUT)
                                 .status(DeploymentStage.PipelineStatus.PENDING)
@@ -164,10 +180,11 @@ public class DeploymentService {
                                 .deployment(deployment)
                                 .estimatedDuration(120L)
                                 .build();
-                deployStage.getSteps().add(DeploymentStep.builder().name("K8s Apply Resources").status(DeploymentStage.PipelineStatus.PENDING).build());
+                deployStage.getSteps().add(DeploymentStep.builder().name("K8s Resource Apply").status(DeploymentStage.PipelineStatus.PENDING).build());
                 deployStage.getSteps().add(DeploymentStep.builder().name("Pod Readiness Check").status(DeploymentStage.PipelineStatus.PENDING).build());
 
-                deployment.getStages().addAll(List.of(buildStage, testStage, deployStage));
+                deployment.getStages().addAll(List.of(prepStage, buildStage, deployStage));
+                deploymentRepository.saveAndFlush(deployment);
         }
 
         private void updateStageStatus(Deployment deployment, String stageName, DeploymentStage.PipelineStatus status) {
@@ -189,12 +206,38 @@ public class DeploymentService {
 
         @Transactional
         public void reconcileLatestDeployment(Application app, Project project, Deployment deployment) {
-                int desiredReplicas = deployment.getReplicas() <= 0 ? 0 : deployment.getReplicas();
-                String ingressUrl = applyRuntimeResources(app, project, deployment.getVersion(), desiredReplicas);
+                try {
+                        String namespace = project.getK8sNamespace();
+                        String deploymentName = resolveDeploymentName(app, project);
+                        var k8sDeployment = kubernetesClient.apps().deployments().inNamespace(namespace).withName(deploymentName).get();
+                        
+                        if (k8sDeployment == null) {
+                                // If it doesn't exist, we must re-apply or mark as STOPPED/FAILED
+                                String ingressUrl = applyRuntimeResources(app, project, deployment.getVersion(), deployment.getReplicas());
+                                deployment.setIngressUrl(ingressUrl);
+                                deploymentRepository.save(deployment);
+                                return;
+                        }
 
-                deployment.setIngressUrl(ingressUrl);
-                deployment.setStatus(desiredReplicas == 0 ? DeploymentStatus.STOPPED : DeploymentStatus.HEALTHY);
-                deploymentRepository.save(deployment);
+                        // Use actual status from k8s if possible
+                        var status = k8sDeployment.getStatus();
+                        var spec = k8sDeployment.getSpec();
+                        int desired = spec.getReplicas() != null ? spec.getReplicas() : 0;
+                        int ready = (status != null && status.getReadyReplicas() != null) ? status.getReadyReplicas() : 0;
+
+                        if (desired == 0) {
+                                deployment.setStatus(DeploymentStatus.STOPPED);
+                        } else if (ready >= desired) {
+                                deployment.setStatus(DeploymentStatus.HEALTHY);
+                        } else {
+                                deployment.setStatus(DeploymentStatus.IN_PROGRESS);
+                        }
+                        
+                        deploymentRepository.save(deployment);
+                } catch (Exception e) {
+                        log.warn("Manual reconciliation failed for app {}: {}", app.getName(), e.getMessage());
+                        // Stay in previous status
+                }
         }
 
         public void stopApplication(Application app, Project project) {
@@ -238,6 +281,8 @@ public class DeploymentService {
                                                 .withNewMetadata()
                                                 .withName(deploymentName)
                                                 .addToLabels("app", resourceName)
+                                                .addToLabels("managed-by", "ork8stra")
+                                                .addToAnnotations("ork8stra.com/app-id", app.getId().toString())
                                                 .endMetadata()
                                                 .withNewSpec()
                                                 .withReplicas(replicas)
@@ -278,6 +323,7 @@ public class DeploymentService {
                                                 .withNewMetadata()
                                                 .withName(resourceName + "-svc")
                                                 .addToLabels("app", resourceName)
+                                                .addToLabels("managed-by", "ork8stra")
                                                 .endMetadata()
                                                 .withNewSpec()
                                                 .withSelector(Collections.singletonMap("app", resourceName))
@@ -302,6 +348,7 @@ public class DeploymentService {
                                 .withNewMetadata()
                                 .withName(resourceName + "-ingress")
                                 .addToLabels("app", resourceName)
+                                .addToLabels("managed-by", "ork8stra")
                                 .addToAnnotations("cert-manager.io/cluster-issuer", "kubelite-selfsigned")
                                 .addToAnnotations("nginx.ingress.kubernetes.io/ssl-redirect", "true")
                                 .addToAnnotations("nginx.ingress.kubernetes.io/rewrite-target", "/$2")
@@ -604,30 +651,75 @@ public class DeploymentService {
                         "    }\n" +
                         "}\n";
 
+                String nodeIp = discoverNodeIp();
+                String apiBase = (nodeIp != null) ? "https://ork8stra." + nodeIp + ".sslip.io" : "https://ork8stra." + baseDomain;
+
                 String errorHtml = "<!DOCTYPE html>\n" +
                         "<html lang=\"en\">\n" +
                         "<head>\n" +
                         "    <meta charset=\"UTF-8\">\n" +
                         "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
-                        "    <meta http-equiv=\"refresh\" content=\"3\">\n" +
-                        "    <title>Application Starting | KubeLite</title>\n" +
+                        "    <title>Application Status | KubeLite</title>\n" +
                         "    <style>\n" +
                         "        body { margin: 0; padding: 0; background-color: #0A0A0A; color: #E3E3E3; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; text-align: center; }\n" +
                         "        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255, 255, 255, 0.1); border-radius: 50%; border-top-color: #10B981; animation: spin 1s ease-in-out infinite; margin-bottom: 20px; }\n" +
                         "        @keyframes spin { to { transform: rotate(360deg); } }\n" +
                         "        h1 { font-size: 24px; font-weight: 500; margin: 0 0 8px 0; letter-spacing: -0.5px; }\n" +
                         "        p { color: #888; font-size: 14px; margin: 0; }\n" +
-                        "        .container { background: #111; padding: 40px 60px; border-radius: 12px; border: 1px solid #222; box-shadow: 0 8px 32px rgba(0,0,0,0.4); display: flex; flex-direction: column; align-items: center; }\n" +
-                        "        .brand { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #555; margin-top: 30px; }\n" +
+                        "        .container { background: #111; padding: 40px 60px; border-radius: 12px; border: 1px solid #222; box-shadow: 0 8px 32px rgba(0,0,0,0.4); display: flex; flex-direction: column; align-items: center; min-width: 320px; }\n" +
+                        "        .brand { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #444; margin-top: 30px; font-weight: bold; }\n" +
+                        "        .status-badge { font-size: 10px; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; background: #222; color: #10B981; margin-bottom: 12px; font-weight: bold; letter-spacing: 1px; }\n" +
                         "    </style>\n" +
                         "</head>\n" +
                         "<body>\n" +
                         "    <div class=\"container\">\n" +
-                        "        <div class=\"spinner\"></div>\n" +
-                        "        <h1>Application is Starting</h1>\n" +
-                        "        <p>Your pod is spinning up. Hang tight, this page will auto-refresh.</p>\n" +
+                        "        <div id=\"status-badge\" class=\"status-badge\">PROVISIONING</div>\n" +
+                        "        <div id=\"loader\" class=\"spinner\"></div>\n" +
+                        "        <h1 id=\"main-title\">Application is Starting</h1>\n" +
+                        "        <p id=\"sub-text\">Your pod is spinning up. Hang tight, this page will auto-refresh.</p>\n" +
                         "    </div>\n" +
                         "    <div class=\"brand\">Powered by KubeLite</div>\n" +
+                        "    <script>\n" +
+                        "        const apiBase = \"" + apiBase + "\";\n" +
+                        "        const host = window.location.hostname;\n" +
+                        "        \n" +
+                        "        async function checkStatus() {\n" +
+                        "            try {\n" +
+                        "                const resp = await fetch(`${apiBase}/api/v1/public/app-status?host=${host}`);\n" +
+                        "                if (resp.ok) {\n" +
+                        "                    const data = await resp.json();\n" +
+                        "                    updateUI(data.status);\n" +
+                        "                }\n" +
+                        "            } catch (e) { console.error(\"Status check failed\", e); }\n" +
+                        "        }\n" +
+                        "\n" +
+                        "        function updateUI(status) {\n" +
+                        "            const title = document.getElementById('main-title');\n" +
+                        "            const sub = document.getElementById('sub-text');\n" +
+                        "            const badge = document.getElementById('status-badge');\n" +
+                        "            const loader = document.getElementById('loader');\n" +
+                        "\n" +
+                        "            badge.innerText = status;\n" +
+                        "            \n" +
+                        "            if (status === 'STOPPED') {\n" +
+                        "                title.innerText = \"Application is Sleeping\";\n" +
+                        "                sub.innerText = \"This service has been suspended to save resources. Start it from your dashboard to wake it up.\";\n" +
+                        "                loader.style.display = 'none';\n" +
+                        "                badge.style.color = '#6B7280';\n" +
+                        "            } else if (status === 'RESTARTING') {\n" +
+                        "                title.innerText = \"Application is Restarting\";\n" +
+                        "                sub.innerText = \"We're applying updates or scaling resources. It'll be back in a moment.\";\n" +
+                        "                loader.style.display = 'block';\n" +
+                        "                badge.style.color = '#F59E0B';\n" +
+                        "            } else if (status === 'HEALTHY' || status === 'SUCCESS') {\n" +
+                        "                // If it's healthy but we're still seeing the error page, it's likely ingress propagation\n" +
+                        "                window.location.reload();\n" +
+                        "            }\n" +
+                        "        }\n" +
+                        "\n" +
+                        "        setInterval(checkStatus, 3000);\n" +
+                        "        checkStatus();\n" +
+                        "    </script>\n" +
                         "</body>\n" +
                         "</html>\n";
 

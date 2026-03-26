@@ -20,6 +20,7 @@ public class Deployment {
     @Id
     private UUID id;
     private UUID applicationId;
+    private UUID userId;
     private String version; // Image Tag
     private int replicas;
 

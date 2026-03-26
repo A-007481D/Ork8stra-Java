@@ -18,6 +18,7 @@ public class Build {
     @Id
     private UUID id;
     private UUID applicationId;
+    private UUID userId;
     private String commitHash;
 
     @Enumerated(EnumType.STRING)

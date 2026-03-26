@@ -42,7 +42,23 @@ minikube-start: ## Start the Minikube cluster
 	@echo "Checking minikube status..."
 	@minikube status >/dev/null 2>&1 || minikube start
 
+k8s-reset: ## Delete all Kubernetes resources managed by Ork8stra
+	@echo "Purging Ork8stra managed resources from Kubernetes..."
+	-kubectl delete deployments -l managed-by=ork8stra --all-namespaces
+	-kubectl delete services -l managed-by=ork8stra --all-namespaces
+	-kubectl delete ingresses -l managed-by=ork8stra --all-namespaces
+	-kubectl delete pods -l managed-by=ork8stra --all-namespaces
+	@echo "Kubernetes cleanup complete."
+
 # --- Utility Commands ---
+
+test: ## Run all backend unit and integration tests
+	./mvnw test
+
+db-reset: ## Hard reset of the database (removes all data and volumes)
+	docker compose down -v
+	docker compose up -d
+	@echo "Database has been reset and infrastructure is restarting..."
 
 run: minikube-start docker-up ## Start the entire application (Infrastructure, Backend, Frontend) in development mode
 	@echo "Starting backend and frontend..."
@@ -57,9 +73,10 @@ stop: docker-down ## Stop all infrastructure and background processes
 	@pkill -f "vite" || true
 	@echo "All processes stopped."
 
-clean: ## Clean Maven target directory and frontend dist folder
+clean: ## Clean Maven target directory and frontend build artifacts
 	./mvnw clean
 	rm -rf frontend/dist
 
-reset: docker-down clean ## Stop containers, clean build artifacts, and remove frontend node_modules
+reset: db-reset clean k8s-reset ## Deep cleanup: Reset DB, stop containers, clean builds, and purge Kubernetes
 	rm -rf frontend/node_modules
+	@echo "Deep reset complete. Run 'make install-frontend' then 'make run' to start fresh."

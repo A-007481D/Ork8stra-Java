@@ -10,11 +10,15 @@ import com.ork8stra.buildengine.BuildLogService;
 import com.ork8stra.buildengine.BuildService;
 import com.ork8stra.projectmanagement.Project;
 import com.ork8stra.projectmanagement.ProjectService;
+import com.ork8stra.user.User;
+import com.ork8stra.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -32,6 +36,7 @@ public class BuildController {
     private final BuildService buildService;
     private final BuildLogService buildLogService;
     private final DeploymentService deploymentService;
+    private final UserRepository userRepository;
 
     @Value("${kubelite.image.repository:ttl.sh}")
     private String imageRepository;
@@ -40,17 +45,20 @@ public class BuildController {
     private String ttlShTagTtl;
 
     @PostMapping
-    public ResponseEntity<BuildResponse> triggerBuild(@PathVariable UUID appId) {
+    public ResponseEntity<BuildResponse> triggerBuild(@PathVariable UUID appId, @AuthenticationPrincipal UserDetails userDetails) {
         Application app = applicationService.getApplication(appId);
         Project project = projectService.getProjectById(app.getProjectId());
+
+        User user = userRepository.findByUsernameIgnoreCase(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         String imageTag = resolveImageTag(app);
 
         log.info("Triggering build for app '{}' into namespace '{}' targeting image '{}'",
                 app.getName(), project.getK8sNamespace(), imageTag);
 
-        Deployment deployment = deploymentService.triggerBuildDeployment(app, project, imageTag);
-        Build build = buildService.triggerBuild(app, project, imageTag);
+        Deployment deployment = deploymentService.triggerBuildDeployment(app, project, imageTag, user.getId());
+        Build build = buildService.triggerBuild(app, project, imageTag, user.getId());
 
         return ResponseEntity.accepted().body(BuildResponse.from(build, deployment.getId()));
     }

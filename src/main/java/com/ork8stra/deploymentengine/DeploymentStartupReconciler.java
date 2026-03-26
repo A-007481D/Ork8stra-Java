@@ -28,14 +28,13 @@ public class DeploymentStartupReconciler {
         }
     }
 
-    private void reconcileSingle(Application app, Deployment latest) {
+        private void reconcileSingle(Application app, Deployment latest) {
         try {
             Project project = projectService.getProjectById(app.getProjectId());
             deploymentService.reconcileLatestDeployment(app, project, latest);
         } catch (Exception ex) {
             log.warn("Failed to reconcile app '{}' on startup: {}", app.getName(), ex.getMessage());
-            latest.setStatus(DeploymentStatus.UNHEALTHY);
-            deploymentRepository.save(latest);
+            // Do NOT blindly set UNHEALTHY anymore. Let it stay in its last known state or wait for Watcher.
         }
     }
 }

@@ -49,19 +49,6 @@ const BuildDetailView = ({ deploymentId, appId, token, onClose, type: initialTyp
             
             const data = await res.json();
             
-            // If it's a build, mock the stages for the DAG
-            if (viewType === 'build' && (!data.stages || data.stages.length === 0)) {
-                data.stages = [{
-                    id: 'build-stage',
-                    name: 'Source Compilation',
-                    status: data.status === 'RUNNING' ? 'RUNNING' : (data.status === 'SUCCESS' ? 'SUCCESS' : 'FAILED'),
-                    startTime: data.startTime,
-                    endTime: data.endTime,
-                    estimatedDuration: 120, // 2 minutes for a typical build
-                    steps: [{ name: 'Nixpacks Build', status: data.status }]
-                }];
-            }
-            
             setDeployment(data);
         } catch (err: any) {
             if (err.name !== 'AbortError') console.error("Fetch Data Error:", err);
@@ -149,11 +136,14 @@ const BuildDetailView = ({ deploymentId, appId, token, onClose, type: initialTyp
           <div className="flex items-center gap-4">
               <Badge className={
                 (deployment.status === 'HEALTHY' || deployment.status === 'SUCCESS' || deployment.status === 'SUCCESSFUL') ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                (deployment.status === 'RUNNING' || deployment.status === 'PENDING' || deployment.status === 'IN_PROGRESS' || deployment.status === 'RESTARTING') ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 animate-pulse' :
-                (deployment.status === 'STOPPED') ? 'bg-slate-500/20 text-slate-400 border-slate-500/30' :
+                (deployment.status === 'RUNNING' || deployment.status === 'PENDING' || deployment.status === 'IN_PROGRESS' || deployment.status === 'RESTARTING' || deployment.status === 'UNHEALTHY') ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse' :
+                (deployment.status === 'STOPPED' || deployment.status === 'IDLE') ? 'bg-slate-500/20 text-slate-400 border-slate-500/30' :
                 'bg-red-500/20 text-red-400 border-red-500/30'
               }>
-                {deployment.status}
+                {(deployment.status === 'HEALTHY' || deployment.status === 'SUCCESS' || deployment.status === 'SUCCESSFUL') ? 'SUCCESS' : 
+                 (deployment.status === 'RUNNING' || deployment.status === 'PENDING' || deployment.status === 'IN_PROGRESS' || deployment.status === 'UNHEALTHY') ? 'BUILDING' : 
+                 (deployment.status === 'STOPPED' || deployment.status === 'IDLE') ? 'STOPPED' :
+                 deployment.status}
               </Badge>
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">

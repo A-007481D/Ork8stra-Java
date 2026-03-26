@@ -23,6 +23,7 @@ public class NotificationController {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final com.ork8stra.notification.NotificationService notificationService;
 
     @GetMapping
     public ResponseEntity<List<NotificationResponse>> listNotifications(
@@ -59,6 +60,15 @@ public class NotificationController {
         
         notification.setRead(true);
         notificationRepository.save(notification);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/read-all")
+    public ResponseEntity<Void> markAllAsRead(@AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByUsernameIgnoreCase(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        notificationService.markAllAsRead(user.getId());
         return ResponseEntity.noContent().build();
     }
 

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Github, CheckCircle2, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+import Ork8straLogo from "./components/Ork8straLogo";
 
 export default function Register() {
     const [loading, setLoading] = useState(false);
@@ -54,29 +56,30 @@ export default function Register() {
     return (
         <div className="min-h-screen w-full bg-[#050505] text-white font-sans flex overflow-hidden">
 
-            {/* ---------------------------------------------------------------------------
-          LEFT SIDE: VISUAL & BRANDING
-         --------------------------------------------------------------------------- */}
-            <div className="hidden lg:flex w-1/2 bg-[#0B0C10] border-r border-white/5 flex-col justify-between p-12 relative overflow-hidden">
+            {/* LEFT SIDE: VISUAL & BRANDING */}
+            <motion.div 
+                initial={{ x: -100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className="hidden lg:flex w-1/2 bg-[#0B0C10] border-r border-white/5 flex-col justify-between p-20 relative overflow-hidden"
+            >
 
                 {/* Background Decor */}
                 <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600/5 blur-[100px] rounded-full pointer-events-none" />
 
                 {/* Brand Top */}
-                <Link to="/" className="flex items-center gap-2 z-10 w-fit hover:opacity-80 transition-opacity">
-                    <div className="w-8 h-8 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blue-500/20">
-                        O
-                    </div>
-                    <span className="text-xl font-bold tracking-tight text-white">
+                <Link to="/" className="flex items-center gap-4 z-10 w-fit group hover:opacity-80 transition-opacity">
+                    <Ork8straLogo className="w-10 h-10" />
+                    <span className="text-2xl font-black tracking-tighter text-white">
                         ork8stra
                     </span>
                 </Link>
 
                 {/* Features Middle */}
-                <div className="relative z-10 max-w-md space-y-8">
-                    <h2 className="text-3xl font-bold tracking-tight">Join the modern era<br />of infrastructure.</h2>
-                    <div className="space-y-4">
+                <div className="relative z-10 max-w-lg space-y-12">
+                    <h2 className="text-5xl font-black leading-[1.1] tracking-[-0.05em] text-white">Join the modern era<br />of infrastructure.</h2>
+                    <div className="space-y-6">
                         <FeatureRow text="Unlimited free deployments for hobbyists" />
                         <FeatureRow text="Global edge network included" />
                         <FeatureRow text="Automatic DDoS protection" />
@@ -84,71 +87,81 @@ export default function Register() {
                     </div>
                 </div>
 
+                {/* Status Bottom */}
+                <div className="flex items-center gap-2 text-sm text-emerald-500 bg-emerald-500/10 px-3 py-1.5 rounded-full w-fit border border-emerald-500/20">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>All Systems Operational</span>
+                </div>
+
                 {/* Footer Bottom */}
                 <div className="text-sm text-slate-500">
                     © 2026 Ork8stra Inc.
                 </div>
-            </div>
+            </motion.div>
 
 
-            {/* ---------------------------------------------------------------------------
-          RIGHT SIDE: REGISTER FORM
-         --------------------------------------------------------------------------- */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 relative">
-
-                <Link to="/" className="absolute top-8 left-8 flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm">
-                    <ArrowLeft className="w-4 h-4" /> Back to Home
+            {/* RIGHT SIDE: REGISTER FORM */}
+            <motion.div 
+                initial={{ x: 100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className="w-full lg:w-1/2 flex items-center justify-center p-20 relative"
+            >
+                <Link to="/" className="absolute top-8 left-8 flex items-center gap-2 text-slate-700 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest">
+                    <ArrowLeft className="w-3 h-3" /> Back to Home
                 </Link>
 
-                <div className="w-full max-w-sm space-y-8">
+                <div className="w-full max-w-sm space-y-12">
 
-                    <div className="text-center">
-                        <h1 className="text-3xl font-bold tracking-tight mb-2">Create an account</h1>
-                        <p className="text-slate-400">Get started with your 14-day Pro trial.</p>
+                    <div className="text-center space-y-2">
+                        <h1 className="text-5xl font-black tracking-[-0.05em] text-white">Create an account</h1>
+                        <p className="text-slate-500 text-sm font-medium lowercase tracking-tight">Get started with your 14-day Pro trial.</p>
                     </div>
 
                     <div className="space-y-4">
                         <button
                             type="button"
                             onClick={handleGithubLogin}
-                            className="w-full bg-[#1A1C20] hover:bg-[#22242A] border border-white/10 text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-3 transition-all active:scale-95"
+                            className="w-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-white font-black text-xs uppercase tracking-widest py-4 rounded-xl flex items-center justify-center gap-3 transition-all active:scale-95 backdrop-blur-xl"
                         >
-                            <Github className="w-5 h-5" />
+                            <Github className="w-4 h-4" />
                             Sign up with GitHub
                         </button>
 
                         <div className="relative">
-                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
-                            <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#050505] px-2 text-slate-500">Or sign up with email</span></div>
+                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5" /></div>
+                            <div className="relative flex justify-center text-[10px] font-black uppercase tracking-[0.2em]"><span className="bg-[#050505] px-4 text-slate-700">Or sign up with email</span></div>
                         </div>
 
                         <form onSubmit={handleRegister} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1.5">Username</label>
-                                <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="w-full bg-[#0D0E12] border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="johndoe" />
-                            </div>
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Username</label>
+                                    <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-blue-500/50 backdrop-blur-sm transition-all" placeholder="johndoe" />
+                                </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1.5">Email address</label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-[#0D0E12] border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                                    placeholder="engineer@company.com"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1.5">Password</label>
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-[#0D0E12] border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                                    placeholder="Min. 8 characters"
-                                    required
-                                />
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Email address</label>
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm placeholder:text-slate-800 focus:outline-none focus:border-blue-500/50 backdrop-blur-sm transition-all"
+                                        placeholder="engineer@company.com"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Password</label>
+                                    <input
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm placeholder:text-slate-800 focus:outline-none focus:border-blue-500/50 backdrop-blur-sm transition-all"
+                                        placeholder="Min. 8 characters"
+                                        required
+                                    />
+                                </div>
                             </div>
 
                             {error && (
@@ -159,19 +172,19 @@ export default function Register() {
 
                             <button
                                 disabled={loading}
-                                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-all shadow-lg shadow-blue-900/20 active:scale-95 flex items-center justify-center gap-2"
+                                className="w-full bg-white text-black font-black text-xs uppercase tracking-[0.2em] py-4 rounded-xl hover:bg-blue-50 transition-all shadow-[0_0_40px_rgba(255,255,255,0.1)] active:scale-95 flex items-center justify-center gap-2"
                             >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Deploy Identity"}
                             </button>
                         </form>
                     </div>
 
-                    <p className="text-center text-sm text-slate-500">
-                        Already have an account? <Link to="/login" className="text-blue-400 hover:text-blue-300 transition-colors">Sign in</Link>
+                    <p className="text-center text-[10px] font-black uppercase tracking-widest text-slate-800">
+                        Already authenticated? <Link to="/login" className="text-blue-500 hover:text-white transition-colors ml-2">Resume Session</Link>
                     </p>
 
                 </div>
-            </div>
+            </motion.div>
 
         </div>
     );
@@ -179,11 +192,11 @@ export default function Register() {
 
 function FeatureRow({ text }: { text: string }) {
     return (
-        <div className="flex items-center gap-3 text-slate-300">
-            <div className="w-5 h-5 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
-                <CheckCircle2 className="w-3 h-3" />
+        <div className="flex items-center gap-4 text-white/50 group cursor-default">
+            <div className="w-8 h-8 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center group-hover:border-blue-500/50 transition-colors">
+                <CheckCircle2 className="w-4 h-4 text-blue-500" />
             </div>
-            <span>{text}</span>
+            <span className="text-sm font-bold uppercase tracking-tight lowercase">{text}</span>
         </div>
     )
 }

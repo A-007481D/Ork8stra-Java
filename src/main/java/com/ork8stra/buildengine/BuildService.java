@@ -8,6 +8,8 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.ork8stra.notification.NotificationService;
+import com.ork8stra.notification.NotificationType;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,10 +28,12 @@ public class BuildService {
     private final KanikoJobFactory kanikoJobFactory;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final EventPublisher eventPublisher;
+    private final NotificationService notificationService;
 
     @Transactional
-    public Build triggerBuild(Application app, Project project, String imageDestination) {
+    public Build triggerBuild(Application app, Project project, String imageDestination, UUID userId) {
         Build build = new Build(app.getId(), "HEAD");
+        build.setUserId(userId);
         build.setStatus(BuildStatus.RUNNING);
         build.setImageTag(imageDestination);
 
@@ -44,6 +48,9 @@ public class BuildService {
 
         log.info("Dispatched Kaniko job '{}' in namespace '{}'", jobName, project.getK8sNamespace());
         Build saved = buildRepository.save(build);
+
+        notificationService.sendNotification(userId, NotificationType.BUILD_STARTED, 
+            "Build Started", "Building image for application: " + app.getName());
 
         eventPublisher.publishBuildStatus(saved.getId().toString(), "RUNNING", imageDestination);
 
@@ -65,14 +72,22 @@ public class BuildService {
 
         buildRepository.save(build);
 
+        if (status == BuildStatus.SUCCESS) {
+            notificationService.sendNotification(build.getUserId(), NotificationType.BUILD_COMPLETED,
+                "Build Successful", "Successfully built image: " + build.getImageTag());
+        } else if (status == BuildStatus.FAILED) {
+            notificationService.sendNotification(build.getUserId(), NotificationType.DEPLOY_FAILED,
+                "Build Failed", "Failed to build image for application ID: " + build.getApplicationId());
+        }
+
         eventPublisher.publishBuildStatus(buildId.toString(), status.name(), imageTag);
 
         if (status == BuildStatus.SUCCESS) {
             applicationEventPublisher
-                    .publishEvent(new BuildCompletedEvent(buildId, build.getApplicationId(), imageTag, true));
+                    .publishEvent(new BuildCompletedEvent(buildId, build.getApplicationId(), build.getUserId(), imageTag, true));
         } else if (status == BuildStatus.FAILED) {
             applicationEventPublisher
-                    .publishEvent(new BuildCompletedEvent(buildId, build.getApplicationId(), null, false));
+                    .publishEvent(new BuildCompletedEvent(buildId, build.getApplicationId(), build.getUserId(), null, false));
         }
     }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Activity, Server, GitCommit, Clock, AlertCircle, Terminal, Search } from "lucide-react";
+import { Activity, Server, GitCommit, Clock, Terminal, Search } from "lucide-react";
 
 export default function DashboardPreview() {
     // Simulated live data
@@ -34,9 +34,9 @@ export default function DashboardPreview() {
                     <div className="flex items-center gap-2 text-slate-400">
                         <span className="font-bold text-white">ork8stra</span>
                         <span className="text-slate-600">/</span>
-                        <span>us-east-1</span>
+                        <span>prod-cluster</span>
                         <span className="text-slate-600">/</span>
-                        <span className="text-blue-400">production</span>
+                        <span className="text-blue-400">primary</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-3 text-slate-500">
@@ -75,11 +75,10 @@ export default function DashboardPreview() {
                         </div>
                     </div>
 
-                    {/* METRICS ROW */}
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                        <MetricCard label="Requests/sec" value={reqs.toLocaleString()} trend="+12%" icon={<Activity className="w-3 h-3 text-emerald-400" />} chartColor="bg-emerald-500" />
-                        <MetricCard label="Avg Latency" value={`${latency}ms`} trend="-2%" icon={<Clock className="w-3 h-3 text-blue-400" />} chartColor="bg-blue-500" />
-                        <MetricCard label="Error Rate" value="0.01%" trend="0%" icon={<AlertCircle className="w-3 h-3 text-slate-400" />} chartColor="bg-slate-500" isFlat />
+                    <div className="grid grid-cols-3 gap-8 mb-10 relative z-10 p-2">
+                        <MetricCard label="Throughput" value={reqs.toLocaleString()} unit="rps" />
+                        <MetricCard label="Latency" value={`${latency}`} unit="ms" />
+                        <MetricCard label="Success" value="99.9" unit="%" />
                     </div>
 
                     {/* ACTIVE DEPLOYMENTS LIST */}
@@ -126,28 +125,16 @@ export default function DashboardPreview() {
     );
 }
 
-function MetricCard({ label, value, trend, icon, chartColor, isFlat }: any) {
+function MetricCard({ label, value, unit }: any) {
     return (
-        <div className="p-4 rounded-lg bg-[#0D0E12] border border-white/5 hover:border-white/10 transition-colors group relative overflow-hidden">
-            <div className="flex justify-between items-start mb-2">
-                <span className="text-slate-500">{label}</span>
-                {icon}
-            </div>
-            <div className="text-2xl font-mono text-white mb-1">{value}</div>
-            <div className={`text-[10px] ${isFlat ? 'text-slate-500' : 'text-emerald-500'} flex items-center gap-1`}>
-                {!isFlat && <span className="bg-emerald-500/10 px-1 rounded">{trend}</span>}
-                {isFlat && <span className="bg-slate-500/10 px-1 rounded">Stable</span>}
-                <span className="text-slate-600">vs last hour</span>
-            </div>
-
-            {/* Fake Sparkline */}
-            <div className="absolute bottom-0 left-0 right-0 h-1 flex items-end opacity-20 group-hover:opacity-40 transition-opacity">
-                {[...Array(20)].map((_, i) => (
-                    <div key={i} className={`flex-1 mx-[1px] ${chartColor}`} style={{ height: `${20 + ((i * 17 + label.charCodeAt(0)) % 80)}%` }} />
-                ))}
+        <div className="flex flex-col gap-1 group">
+            <div className="text-slate-500 text-[9px] font-black uppercase tracking-[0.15em] mb-2">{label}</div>
+            <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-white tracking-tighter">{value}</span>
+                <span className="text-slate-500 text-[10px] font-medium">{unit}</span>
             </div>
         </div>
-    )
+    );
 }
 
 function DeploymentRow({ name, cpu, ram, uptime, isUpdating }: any) {

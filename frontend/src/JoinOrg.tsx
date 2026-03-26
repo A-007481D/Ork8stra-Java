@@ -13,7 +13,6 @@ export default function JoinOrg() {
         const join = async () => {
             const authToken = localStorage.getItem("token");
             if (!authToken) {
-                // Not logged in, redirect to register with this token
                 navigate(`/register?joinToken=${token}`);
                 return;
             }
