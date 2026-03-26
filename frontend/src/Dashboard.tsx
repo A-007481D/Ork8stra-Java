@@ -1018,13 +1018,13 @@ export default function Dashboard() {
                 // If viewing a specific service, sync its state
                 if (viewState.type === 'SERVICE') {
                     const updatedCurrent = mappedServices.find(s => s.id === viewState.service.id);
-                    if (updatedCurrent) {
+                    if (updatedCurrent && (viewState.type === 'SERVICE' && updatedCurrent.status !== viewState.service.status)) {
                         setViewState(prev => prev.type === 'SERVICE' && prev.service.id === updatedCurrent.id ? { ...prev, service: updatedCurrent } : prev);
                     }
                 }
             }
         } catch (e) { console.error(e); }
-    }, [token, viewState, handleAuthError]);
+    }, [token, handleAuthError]); // Remove viewState dependency to break the loop
 
     useEffect(() => {
         fetchOrgs();
@@ -1036,12 +1036,15 @@ export default function Dashboard() {
         if (currentTeam) fetchProjects();
     }, [fetchProjects, currentTeam]);
     useEffect(() => {
-        if (viewState.type === 'PROJECT' || viewState.type === 'SERVICE') {
+        const type = viewState.type;
+        const id = type === 'PROJECT' ? (viewState as any).project?.id : (type === 'SERVICE' ? (viewState as any).service?.id : null);
+        
+        if (type === 'PROJECT' || type === 'SERVICE') {
             fetchServices();
-            const interval = setInterval(fetchServices, 10000); // Auto-refresh every 10s
+            const interval = setInterval(fetchServices, 10000); 
             return () => clearInterval(interval);
         }
-    }, [fetchServices, viewState.type]);
+    }, [fetchServices, viewState.type]); // Now fetchServices is stable!
 
     // Handlers
     const handleProjectSelect = (p: Project) => {

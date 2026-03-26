@@ -1,9 +1,6 @@
 package com.ork8stra.api.controller.github;
 
-import com.ork8stra.api.dto.github.GithubAuthResponse;
-import com.ork8stra.api.dto.github.GithubBranchResponse;
-import com.ork8stra.api.dto.github.GithubConnectRequest;
-import com.ork8stra.api.dto.github.GithubRepoResponse;
+import com.ork8stra.api.dto.github.*;
 import com.ork8stra.integration.github.GithubService;
 import com.ork8stra.user.User;
 import com.ork8stra.user.UserRepository;
@@ -45,6 +42,17 @@ public class GitHubController {
 
         User user = resolveUser(userDetails);
         githubService.connectAccount(user.getId(), request.getAccess_token(), request.getUsername());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/connect-code")
+    public ResponseEntity<Void> connectByCode(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody GithubConnectCodeRequest request) {
+
+        User user = resolveUser(userDetails);
+        GithubUserProfile profile = githubService.exchangeCodeForUserInfo(request.getCode());
+        githubService.connectAccountWithToken(user.getId(), profile.getAccessToken(), profile.getUsername());
         return ResponseEntity.ok().build();
     }
 

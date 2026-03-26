@@ -22,6 +22,16 @@ export default function OAuthCallback() {
         hasAttempted.current = true;
 
         const exchangeCode = async () => {
+            // Check if we are in a popup
+            const isPopup = window.opener && window.opener !== window;
+
+            if (isPopup) {
+                // For popups (like the one in CreateServiceWizard), just pass the code back
+                window.opener.postMessage({ type: 'GITHUB_CODE', code }, window.location.origin);
+                window.close();
+                return;
+            }
+
             try {
                 const response = await fetch('/api/v1/auth/github/login', {
                     method: 'POST',

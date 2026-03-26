@@ -2,6 +2,7 @@ package com.ork8stra.integration.github;
 
 import com.ork8stra.api.dto.github.GithubBranchResponse;
 import com.ork8stra.api.dto.github.GithubRepoResponse;
+import com.ork8stra.api.dto.github.GithubUserProfile;
 import com.ork8stra.user.User;
 import com.ork8stra.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -97,10 +98,22 @@ public class GithubService {
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
             String accessToken = (String) response.getBody().get("access_token");
             if (accessToken != null) {
-                return fetchUserProfile(accessToken);
+                GithubUserProfile profile = fetchUserProfile(accessToken);
+                profile.setAccessToken(accessToken);
+                return profile;
             }
         }
         throw new RuntimeException("Failed to exchange GitHub access token");
+    }
+
+    @Transactional
+    public void connectAccountWithToken(UUID userId, String accessToken, String username) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setGithubUsername(username);
+        user.setGithubAccessToken(accessToken);
+        userRepository.save(user);
+        log.info("Successfully connected GitHub account (with token) for user ID: {}", userId);
     }
 
     private com.ork8stra.api.dto.github.GithubUserProfile fetchUserProfile(String accessToken) {

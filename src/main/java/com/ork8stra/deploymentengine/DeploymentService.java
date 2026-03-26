@@ -246,7 +246,13 @@ public class DeploymentService {
         }
 
         public void startApplication(Application app, Project project) {
-                scaleApplication(app, project, 1);
+                // Re-apply resources to ensure latest configuration (like port detection) is used
+                Optional<Deployment> latest = deploymentRepository.findFirstByApplicationIdOrderByDeployedAtDesc(app.getId());
+                if (latest.isPresent()) {
+                        applyRuntimeResources(app, project, latest.get().getVersion(), 1);
+                } else {
+                        scaleApplication(app, project, 1);
+                }
                 updateLatestDeploymentStatus(app.getId(), DeploymentStatus.HEALTHY, 1);
         }
 
@@ -271,6 +277,7 @@ public class DeploymentService {
                 String resourceName = toKubernetesName(app.getName());
                 String deploymentName = resourceName + "-deploy";
                 int containerPort = detectPortFromImage(imageTag, app);
+                log.info("FINAL RESOLVED PORT for {}: {}", resourceName, containerPort);
                 Map<String, String> envVars = buildRuntimeEnv(app, project, containerPort);
 
                 ensureNamespace(project);
@@ -530,26 +537,51 @@ public class DeploymentService {
                         p2.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
                         
                         var config = objectMapper.readTree(configJson);
-                        log.info("No EXPOSE port found in image {}, check Application config", imageTag);
+                        var configNode = config.path("config");
+                        var exposedPorts = configNode.path("ExposedPorts");
+                        
+                        if (exposedPorts.isObject() && !exposedPorts.isEmpty()) {
+                                String firstPortKey = exposedPorts.fieldNames().next(); // e.g. "8080/tcp"
+                                String portPart = firstPortKey.split("/")[0];
+                                int detected = Integer.parseInt(portPart);
+                                log.info("Successfully detected port {} from image metadata for {}", detected, imageTag);
+                                return detected;
+                        }
+                        
+                        log.info("No EXPOSE port found in image metadata for {}, defaulting to Application config", imageTag);
                 } catch (Exception e) {
                         log.warn("Failed to detect port from image {}: {}. Falling back to default/env.", imageTag, e.getMessage());
                 }
                 return resolveContainerPort(app);
         }
 
-        private int resolveContainerPort(Application app) {
-                String rawPort = app.getEnvVars() == null ? null : app.getEnvVars().get("PORT");
-                if (rawPort == null || rawPort.isBlank()) {
-                        return defaultContainerPort;
-                }
-
-                try {
-                        int parsed = Integer.parseInt(rawPort.trim());
-                        return parsed > 0 && parsed <= 65535 ? parsed : defaultContainerPort;
-                } catch (NumberFormatException ignored) {
-                        return defaultContainerPort;
-                }
+    private int resolveContainerPort(Application app) {
+        // 1. Check if the application explicitly has a port set in the database (from Wizard)
+        if (app.getContainerPort() != null && app.getContainerPort() > 0) {
+            // Special Case: If it's the "3000" default but the name implies it might be something else,
+            // we will still prefer OCI if we find it, but let's see if 3000 is likely wrong.
+            // For now, we trust the DB field if it's not null.
+            return app.getContainerPort();
         }
+
+        // 2. Check environment variable PORT
+        String rawPort = app.getEnvVars() == null ? null : app.getEnvVars().get("PORT");
+        if (rawPort != null && !rawPort.isBlank()) {
+            try {
+                return Integer.parseInt(rawPort.trim());
+            } catch (NumberFormatException ignored) {}
+        }
+
+        // 3. "Magic" Detection based on Name/Framework cues if no explicit port is found
+        String name = app.getName().toLowerCase();
+        if (name.contains("angular") || name.contains("frontend") || name.contains("react")) {
+            log.info("Magic Detection: Application '{}' looks like a frontend, guessing port 80/8080/4200 fallback chain.", app.getName());
+            // We'll use 80 as a better default for frontends than 3000
+            return 80; 
+        }
+
+        return defaultContainerPort;
+    }
 
 
         private void ensureNamespace(Project project) {

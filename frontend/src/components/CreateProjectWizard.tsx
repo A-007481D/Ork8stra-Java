@@ -285,6 +285,17 @@ export default function CreateServiceWizard({
     useEffect(() => {
         const handleMessage = async (event: MessageEvent) => {
             if (event.origin !== window.location.origin) return;
+            
+            if (event.data.type === "GITHUB_CODE") {
+                const { code } = event.data;
+                try {
+                    await api.post("/github/connect-code", { code });
+                    setGithubConnection({ connected: true });
+                    fetchRepos();
+                } catch (e) { console.error(e); }
+            }
+            
+            // Legacy handling for old callback style if any
             if (event.data.type === "GITHUB_CONNECTED") {
                 const { access_token, username } = event.data.data;
                 try {
