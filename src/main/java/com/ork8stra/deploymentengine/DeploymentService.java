@@ -216,7 +216,7 @@ public class DeploymentService {
                         
                         if (k8sDeployment == null) {
                                 // If it doesn't exist, we must re-apply or mark as STOPPED/FAILED
-                                String ingressUrl = applyRuntimeResources(app, project, deployment.getVersion(), deployment.getReplicas());
+                                String ingressUrl = applyRuntimeResources(attachedApp, project, deployment.getVersion(), deployment.getReplicas());
                                 deployment.setIngressUrl(ingressUrl);
                                 deploymentRepository.save(deployment);
                                 return;
@@ -310,6 +310,7 @@ public class DeploymentService {
                 log.info("Smart Routing: Successfully updated infrastructure for {} to port {}", resourceName, newPort);
         }
 
+        @Transactional
         private String applyRuntimeResources(Application app, Project project, String imageTag, int replicas) {
                 String namespace = project.getK8sNamespace();
                 String resourceName = toKubernetesName(app.getName());

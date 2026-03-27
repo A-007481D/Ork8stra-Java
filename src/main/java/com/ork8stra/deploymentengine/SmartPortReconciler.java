@@ -1,5 +1,6 @@
 package com.ork8stra.deploymentengine;
  
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
@@ -7,11 +8,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,20 +32,44 @@ public class SmartPortReconciler {
     // Standard ports to ignore (system services, noise)
     private static final Set<Integer> IGNORED_PORTS = Set.of(22, 111, 3001); // 3001 is our own sidecar/utility usually
 
-    public CompletableFuture<Integer> discoverPort(String namespace, String podName) {
-        CompletableFuture<Integer> future = new CompletableFuture<>();
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ByteArrayOutputStream err = new ByteArrayOutputStream();
+    public Integer discoverListeningPort(Pod pod) {
+        String namespace = pod.getMetadata().getNamespace();
+        String podName = pod.getMetadata().getName();
 
+        // Retry logic: Apps might take a few seconds to initialize listeners
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            if (attempt > 1) {
+                try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                log.info("Smart Discovery: Retry attempt {}/3 for pod {}/{}", attempt, namespace, podName);
+            }
+
+            Integer port = performDiscoveryAttempt(pod);
+            if (port != null) return port;
+        }
+
+        log.warn("Smart Discovery: No active listener found for pod {} after 3 attempts", podName);
+        return null;
+    }
+
+    private Integer performDiscoveryAttempt(Pod pod) {
+        String namespace = pod.getMetadata().getNamespace();
+        String podName = pod.getMetadata().getName();
+        
         log.info("Smart Discovery: Probing /proc/net/tcp for pod {}/{}", namespace, podName);
+        StringBuilder outputBuilder = new StringBuilder();
+        CountDownLatch latch = new CountDownLatch(1);
 
         try {
             // Check both IPv4 and IPv6 to be truly smart!
             String command = "cat /proc/net/tcp /proc/net/tcp6 2>/dev/null";
             
             ExecWatch watch = kubernetesClient.pods().inNamespace(namespace).withName(podName)
-                    .writingOutput(out)
-                    .writingError(err)
+                    .writingOutput(new OutputStream() {
+                        @Override
+                        public void write(int b) {
+                            outputBuilder.append((char) b);
+                        }
+                    })
                     .usingListener(new ExecListener() {
                         @Override
                         public void onOpen() {}
@@ -52,39 +77,34 @@ public class SmartPortReconciler {
                         @Override
                         public void onFailure(Throwable t, Response response) {
                             log.warn("Smart Discovery: Exec failed for {}: {}", podName, t.getMessage());
-                            future.completeExceptionally(t);
+                            latch.countDown();
                         }
 
                         @Override
                         public void onClose(int code, String reason) {
-                            if (code != 0 && code != 1) { // 1 might be fine if one file is missing
-                                log.warn("Smart Discovery: Exec closed with code {} for {}: {}", code, podName, reason);
-                                future.complete(null);
-                                return;
-                            }
-                            
-                            String output = out.toString();
-                            Integer port = parseListeningPort(output);
-                            log.info("Smart Discovery: Detected port {} for pod {}", port, podName);
-                            future.complete(port);
+                            latch.countDown();
                         }
                     })
                     .exec("sh", "-c", command);
             
-            // Safety timeout
-            CompletableFuture.delayedExecutor(10, TimeUnit.SECONDS).execute(() -> {
-                if (!future.isDone()) {
-                    watch.close();
-                    future.complete(null);
+            // Wait for completion with timeout
+            if (latch.await(5, TimeUnit.SECONDS)) {
+                watch.close();
+                String output = outputBuilder.toString();
+                Integer port = parseListeningPort(output);
+                if (port != null) {
+                    log.info("Smart Discovery: Detected port {} for pod {}", port, podName);
                 }
-            });
-
+                return port;
+            } else {
+                log.warn("Smart Discovery: Timeout waiting for pod {} exec output", podName);
+                watch.close();
+            }
         } catch (Exception e) {
-            log.error("Smart Discovery: Failed to initiate probe for {}: {}", podName, e.getMessage());
-            future.completeExceptionally(e);
+            log.error("Smart Discovery: Error during probe for {}: {}", podName, e.getMessage());
         }
 
-        return future;
+        return null;
     }
 
     /**

@@ -115,19 +115,17 @@ public class ServiceHealthWatcher {
         if (podList.isEmpty()) return;
         Pod pod = podList.get(0);
         
-        smartPortReconciler.discoverPort(namespace, pod.getMetadata().getName())
-            .thenAccept(detectedPort -> {
-                if (detectedPort != null && !detectedPort.equals(app.getContainerPort())) {
-                    log.info("Smart Discovery: Port mismatch for app {}. Configured: {}, Detected: {}. Updating...", 
-                        app.getName(), app.getContainerPort(), detectedPort);
-                    
-                    app.setContainerPort(detectedPort);
-                    applicationService.updateApplication(app);
-                    
-                    // Trigger routing update ONLY (no restart)
-                    deploymentService.updateRoutingOnly(app, project, detectedPort);
-                }
-            });
+        Integer detectedPort = smartPortReconciler.discoverListeningPort(pod);
+        if (detectedPort != null && !detectedPort.equals(app.getContainerPort())) {
+            log.info("Smart Discovery: Port mismatch for app {}. Configured: {}, Detected: {}. Updating...", 
+                app.getName(), app.getContainerPort(), detectedPort);
+            
+            app.setContainerPort(detectedPort);
+            applicationService.updateApplication(app);
+            
+            // Trigger routing update ONLY (no restart)
+            deploymentService.updateRoutingOnly(app, project, detectedPort);
+        }
     }
 
     private DeploymentStatus determineStatus(Deployment k8sDeployment) {
